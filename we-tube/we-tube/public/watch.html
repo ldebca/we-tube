@@ -6,6 +6,7 @@
 <title>we-tube · Reproduciendo</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@0.468.0"></script>
 <link rel="stylesheet" href="/css/styles.css"/>
 <script src="/js/theme.js"></script>
 </head>
@@ -21,8 +22,8 @@
           <p id="meta" class="text-sm mt-1" style="color:var(--text-muted)"></p>
         </div>
         <div class="flex gap-2 shrink-0">
-          <button id="fav-btn" class="btn-ghost">⭐ Favorito</button>
-          <button id="delete-btn" class="btn-ghost" style="color:var(--danger)">🗑️ Eliminar</button>
+          <button id="fav-btn" class="btn-ghost"><i data-lucide="star" class="ui-icon"></i> Favorito</button>
+          <button id="delete-btn" class="btn-ghost" style="color:var(--danger)"><i data-lucide="trash-2" class="ui-icon"></i> Eliminar</button>
         </div>
       </div>
 
@@ -67,7 +68,8 @@
           WT.fmtDate(item.published_at || item.created_at), WT.fmtBytes(item.file_size_bytes)]
           .filter(Boolean).join(' · ');
         document.getElementById('meta').textContent = meta;
-        document.getElementById('fav-btn').textContent = item.favorite ? '⭐ Quitar favorito' : '⭐ Favorito';
+        document.getElementById('fav-btn').innerHTML = item.favorite ? '<i data-lucide="star" class="ui-icon fill-current"></i> Quitar favorito' : '<i data-lucide="star" class="ui-icon"></i> Favorito';
+        WT.refreshIcons();
 
         let nextItems = [];
         function renderQueue(items) {
@@ -76,7 +78,7 @@
           document.getElementById('queue-list').innerHTML = nextItems.map((candidate) => `
             <a href="/watch.html?id=${candidate.id}" class="queue-item">
               <div class="queue-thumb">
-                ${candidate.thumbnail_path ? `<img src="/media-files/${candidate.thumbnail_path}" loading="lazy"/>` : '<span>🎬</span>'}
+                ${candidate.thumbnail_path ? `<img src="/media-files/${candidate.thumbnail_path}" loading="lazy"/>` : '<i data-lucide="clapperboard" class="media-placeholder-icon"></i>'}
                 ${candidate.duration_seconds ? `<span class="duration-badge">${WT.fmtDuration(candidate.duration_seconds)}</span>` : ''}
               </div>
               <div class="min-w-0">
@@ -113,7 +115,7 @@
           });
         } else if (item.media_type === 'audio') {
           wrap.innerHTML = `<div class="p-10 flex flex-col items-center gap-4 text-white">
-            <div class="text-6xl">🎵</div>
+            <i data-lucide="music-2" class="media-placeholder-icon"></i>
             <audio src="${src}" controls autoplay class="w-full max-w-md"></audio></div>`;
           WT.trackPlayback(item.id, user, wrap.querySelector('audio'));
         } else {
@@ -129,7 +131,8 @@
 
         document.getElementById('fav-btn').onclick = async () => {
           const r = await WTApi.toggleFavorite(item.id);
-          document.getElementById('fav-btn').textContent = r.favorite ? '⭐ Quitar favorito' : '⭐ Favorito';
+          document.getElementById('fav-btn').innerHTML = r.favorite ? '<i data-lucide="star" class="ui-icon fill-current"></i> Quitar favorito' : '<i data-lucide="star" class="ui-icon"></i> Favorito';
+          WT.refreshIcons();
         };
         document.getElementById('delete-btn').onclick = async () => {
           if (!confirm('¿Eliminar este archivo permanentemente?')) return;

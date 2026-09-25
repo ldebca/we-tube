@@ -6,6 +6,7 @@
 <title>we-tube · Subir</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@0.468.0"></script>
 <link rel="stylesheet" href="/css/styles.css"/>
 <script src="/js/theme.js"></script>
 </head>
@@ -16,7 +17,7 @@
     <p class="text-sm mb-5" style="color:var(--text-muted)">Video, audio o imagen. Se guarda directamente en tu carpeta del catalogo.</p>
 
     <label id="dropzone" class="card rounded-2xl p-10 flex flex-col items-center gap-2 cursor-pointer border-dashed" style="border-style:dashed">
-      <span class="text-3xl">⬆️</span>
+      <i data-lucide="cloud-upload" class="upload-icon" aria-hidden="true"></i>
       <span class="font-medium">Arrastra un archivo o haz clic para elegir</span>
       <span class="text-xs" style="color:var(--text-muted)">mp4, webm, mkv, mp3, m4a, jpg, png, gif, webp...</span>
       <input id="file-input" type="file" class="hidden" accept="video/*,audio/*,image/*"/>

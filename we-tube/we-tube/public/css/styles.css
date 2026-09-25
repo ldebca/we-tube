@@ -54,6 +54,16 @@ h1, h2, h3, .display {
   border: 1px solid var(--border);
 }
 
+.ui-icon {
+  width: 16px; height: 16px; flex: 0 0 auto; vertical-align: middle;
+}
+.badge-icon { width: 13px; height: 13px; flex: 0 0 auto; }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; padding: 8px 10px; }
+.media-placeholder-icon { width: 42px; height: 42px; color: var(--text-muted); stroke-width: 1.5; }
+.upload-icon { width: 42px; height: 42px; color: var(--accent); stroke-width: 1.5; }
+.section-icon { width: 24px; height: 24px; color: var(--accent); flex: 0 0 auto; }
+.fill-current { fill: currentColor; }
+
 .video-card { cursor: pointer; }
 .video-card .thumb-wrap {
   aspect-ratio: 16/9;

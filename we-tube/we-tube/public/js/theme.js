@@ -5,8 +5,9 @@
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem(KEY, theme);
     document.querySelectorAll('[data-theme-icon]').forEach((el) => {
-      el.textContent = theme === 'dark' ? '☀️' : '🌙';
+      el.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
     });
+    if (window.WT && window.WT.refreshIcons) window.WT.refreshIcons();
   }
   function init() {
     const saved = localStorage.getItem(KEY) ||

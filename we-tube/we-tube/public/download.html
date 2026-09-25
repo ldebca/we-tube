@@ -6,6 +6,7 @@
 <title>we-tube · Descargar</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@0.468.0"></script>
 <link rel="stylesheet" href="/css/styles.css"/>
 <script src="/js/theme.js"></script>
 </head>
@@ -13,7 +14,7 @@
   <div id="wt-nav"></div>
   <div class="download-page">
     <div id="ytdlp-warning" class="hidden card rounded-xl p-4 mb-5" style="border-color:var(--danger)">
-      ⚠️ No se detecto <code>yt-dlp</code> en el servidor. Instalalo desde
+      <i data-lucide="triangle-alert" class="ui-icon"></i> No se detecto <code>yt-dlp</code> en el servidor. Instalalo desde
       <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" style="color:var(--accent)">github.com/yt-dlp/yt-dlp</a> y asegurate de que este en el PATH.
     </div>
 
@@ -113,7 +114,7 @@
             <h2 class="text-lg font-semibold">Canales monitoreados</h2>
             <p class="text-sm mt-1" style="color:var(--text-muted)">Se revisan periódicamente y descargan automáticamente los videos nuevos.</p>
           </div>
-          <span class="text-xl" aria-hidden="true">📡</span>
+          <i data-lucide="radio-tower" class="section-icon" aria-hidden="true"></i>
         </div>
 
         <form id="channel-form" class="channel-form mt-4 mb-4">

@@ -6,6 +6,7 @@
 <title>we-tube</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@0.468.0"></script>
 <link rel="stylesheet" href="/css/styles.css"/>
 <script src="/js/theme.js"></script>
 </head>
@@ -15,9 +16,9 @@
   <div class="px-4 md:px-6 py-4">
     <div class="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
       <button data-type="" class="wt-filter btn-ghost !border-0" style="background:var(--accent-soft);color:var(--accent)">Todo</button>
-      <button data-type="video" class="wt-filter btn-ghost !border-0">🎬 Videos</button>
-      <button data-type="audio" class="wt-filter btn-ghost !border-0">🎵 Audio</button>
-      <button data-type="image" class="wt-filter btn-ghost !border-0">🖼️ Imagenes</button>
+      <button data-type="video" class="wt-filter btn-ghost !border-0"><i data-lucide="clapperboard" class="ui-icon"></i> Videos</button>
+      <button data-type="audio" class="wt-filter btn-ghost !border-0"><i data-lucide="music-2" class="ui-icon"></i> Audio</button>
+      <button data-type="image" class="wt-filter btn-ghost !border-0"><i data-lucide="image" class="ui-icon"></i> Imagenes</button>
     </div>
 
     <div id="empty-state" class="hidden text-center py-24">
@@ -43,7 +44,7 @@
         ? `<img src="/media-files/${item.thumbnail_path}" loading="lazy"/>`
         : item.media_type === 'image'
           ? `<img src="/media-files/${item.relative_path}" loading="lazy"/>`
-          : `<div class="w-full h-full flex items-center justify-center text-3xl">${item.media_type === 'audio' ? '🎵' : '🎬'}</div>`;
+          : `<div class="w-full h-full flex items-center justify-center text-3xl"><i data-lucide="${item.media_type === 'audio' ? 'music-2' : 'clapperboard'}" class="media-placeholder-icon"></i></div>`;
 
       const meta = [item.channel_name, WT.fmtViews(item.view_count), WT.fmtDate(item.published_at || item.created_at)]
         .filter(Boolean).join(' · ');
@@ -58,7 +59,7 @@
         <div class="mt-2">
           <p class="text-sm font-medium line-clamp-2">${item.title || item.file_name}</p>
           <p class="text-xs mt-1" style="color:var(--text-muted)">${meta || 'Sin metadata'}</p>
-          <span class="type-badge mt-1 inline-block">${item.media_type}${item.favorite ? ' · ⭐' : ''}</span>
+          <span class="type-badge mt-1 inline-flex items-center gap-1">${item.media_type}${item.favorite ? ' · <i data-lucide="star" class="badge-icon"></i>' : ''}</span>
           ${(() => { const status = WT.getWatchStatus(item.id, user); return status.key === 'progress' ? `<div class="watch-progress mt-2"><span style="width:${Math.min(100, status.percent || 0)}%"></span></div>` : ''; })()}
         </div>
       </a>`;
@@ -71,6 +72,7 @@
       try {
         const items = await WTApi.listMedia(q, currentType);
         grid.innerHTML = items.map(card).join('');
+        WT.refreshIcons();
         empty.classList.toggle('hidden', items.length > 0);
         grid.classList.toggle('hidden', items.length === 0);
       } catch (err) {

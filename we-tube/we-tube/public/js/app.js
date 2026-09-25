@@ -3,6 +3,10 @@ window.WT = (function () {
   const WATCH_STATE_PREFIX = 'wt-watch-state:';
   const AUTOPLAY_PREFIX = 'wt-autoplay:';
 
+  function refreshIcons() {
+    if (window.lucide) window.lucide.createIcons({ attrs: { 'stroke-width': 1.8 } });
+  }
+
   function watchStateKey(user) {
     const identity = user && (user.id || user.username) || 'anonymous';
     return WATCH_STATE_PREFIX + identity;
@@ -132,7 +136,7 @@ window.WT = (function () {
 
   function renderNav(activePage, user) {
     const incognitoBadge = user && user.incognito
-      ? `<span class="text-xs px-2 py-1 rounded-full" style="background:var(--accent-soft);color:var(--accent)">🕶 Incognito</span>`
+      ? `<span class="text-xs px-2 py-1 rounded-full inline-flex items-center gap-1" style="background:var(--accent-soft);color:var(--accent)"><i data-lucide="incognito" class="badge-icon"></i> Incognito</span>`
       : '';
     document.getElementById('wt-nav').innerHTML = `
       <div class="flex items-center justify-between px-4 md:px-6 h-16 border-b" style="border-color:var(--border)">
@@ -140,19 +144,20 @@ window.WT = (function () {
           <a href="/index.html" class="flex items-center"><img src="/assets/logo.svg" class="h-6" alt="we-tube"/></a>
           <div class="hidden md:flex items-center gap-1 flex-1 min-w-[320px]">
             <input id="wt-search" type="text" placeholder="Buscar en tu catalogo..." class="!rounded-r-none" style="max-width:420px"/>
-            <button id="wt-search-btn" class="btn-ghost !rounded-l-none">🔎</button>
+            <button id="wt-search-btn" class="btn-ghost !rounded-l-none icon-button" aria-label="Buscar"><i data-lucide="search" class="ui-icon"></i></button>
           </div>
         </div>
         <div class="flex items-center gap-2">
           ${incognitoBadge}
-          <a href="/upload.html" class="sidebar-link ${activePage === 'upload' ? 'active' : ''}">⬆️ <span class="hidden md:inline">Subir</span></a>
-          <a href="/download.html" class="sidebar-link ${activePage === 'download' ? 'active' : ''}">⬇️ <span class="hidden md:inline">Descargar</span></a>
-          <button data-theme-icon onclick="WTTheme.toggle()" class="btn-ghost">🌙</button>
-          <a href="/settings.html" class="btn-ghost">⚙️</a>
+          <a href="/upload.html" class="sidebar-link ${activePage === 'upload' ? 'active' : ''}"><i data-lucide="upload" class="ui-icon"></i><span class="hidden md:inline">Subir</span></a>
+          <a href="/download.html" class="sidebar-link ${activePage === 'download' ? 'active' : ''}"><i data-lucide="download" class="ui-icon"></i><span class="hidden md:inline">Descargar</span></a>
+          <button data-theme-icon onclick="WTTheme.toggle()" class="btn-ghost icon-button" aria-label="Cambiar tema"><i data-lucide="moon" class="ui-icon"></i></button>
+          <a href="/settings.html" class="btn-ghost icon-button" aria-label="Configuración"><i data-lucide="settings" class="ui-icon"></i></a>
           <span class="text-sm hidden md:inline" style="color:var(--text-muted)">${user ? user.username : ''}</span>
-          <button id="wt-logout" class="btn-ghost">Salir</button>
+          <button id="wt-logout" class="btn-ghost"><i data-lucide="log-out" class="ui-icon"></i><span class="hidden md:inline">Salir</span></button>
         </div>
       </div>`;
+    refreshIcons();
 
     document.getElementById('wt-logout').onclick = async () => {
       await WTApi.logout();
@@ -167,5 +172,7 @@ window.WT = (function () {
     }
   }
 
-  return { toast, fmtViews, fmtDuration, fmtDate, fmtBytes, guard, renderNav, getWatchStatus, trackPlayback, markViewed, getAutoplay, setAutoplay };
+  const api = { toast, fmtViews, fmtDuration, fmtDate, fmtBytes, guard, renderNav, getWatchStatus, trackPlayback, markViewed, getAutoplay, setAutoplay, refreshIcons };
+  refreshIcons();
+  return api;
 })();
