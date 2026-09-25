@@ -65,6 +65,16 @@ h1, h2, h3, .display {
 .fill-current { fill: currentColor; }
 
 .video-card { cursor: pointer; }
+.channel-section { padding-bottom: 2.5rem; }
+.channel-section + .channel-section { border-top: 1px solid var(--border); padding-top: 2rem; }
+.channel-section-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  margin-bottom: 1rem;
+}
+.channel-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  gap: 1.5rem 1rem;
+}
 .video-card .thumb-wrap {
   aspect-ratio: 16/9;
   background: var(--bg-hover);

@@ -6,7 +6,7 @@
 <title>we-tube</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/lucide@0.468.0"></script>
+<script src="https://unpkg.com/lucide@0.468.0" integrity="sha384-uTYyvsSSUZeaPhb5RbKlQa0zY/WpX/QHfvg2mczXyBQOpkWPEDy9lczyp+w7SKXu" crossorigin="anonymous"></script>
 <link rel="stylesheet" href="/css/styles.css"/>
 <script src="/js/theme.js"></script>
 </head>
@@ -30,7 +30,7 @@
       </div>
     </div>
 
-    <div id="grid" class="grid gap-x-4 gap-y-6" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));"></div>
+    <div id="catalog-sections"></div>
   </div>
 
   <script src="/js/api.js"></script>
@@ -38,6 +38,7 @@
   <script>
     let currentType = '';
     let user = null;
+    const NO_CHANNEL = 'Global (sin canal)';
 
     function card(item) {
       const thumb = item.thumbnail_path
@@ -65,18 +66,42 @@
       </a>`;
     }
 
+    function renderSections(items) {
+      const groups = new Map();
+      items.forEach((item) => {
+        const channel = item.channel_name && item.channel_name.trim() ? item.channel_name.trim() : NO_CHANNEL;
+        if (!groups.has(channel)) groups.set(channel, []);
+        groups.get(channel).push(item);
+      });
+
+      return [...groups.entries()].map(([channel, channelItems]) => {
+        const label = channel.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+        return `
+        <section class="channel-section">
+          <div class="channel-section-header">
+            <div class="flex items-center gap-2 min-w-0">
+              <i data-lucide="${channel === NO_CHANNEL ? 'library' : 'radio'}" class="section-icon"></i>
+              <h2 class="text-lg font-semibold truncate">${label}</h2>
+            </div>
+            <span class="text-xs shrink-0" style="color:var(--text-muted)">${channelItems.length} ${channelItems.length === 1 ? 'elemento' : 'elementos'}</span>
+          </div>
+          <div class="channel-grid">${channelItems.map(card).join('')}</div>
+        </section>`;
+      }).join('');
+    }
+
     async function load(q) {
-      const grid = document.getElementById('grid');
+      const sections = document.getElementById('catalog-sections');
       const empty = document.getElementById('empty-state');
-      grid.innerHTML = '<p style="color:var(--text-muted)" class="col-span-full">Cargando...</p>';
+      sections.innerHTML = '<p style="color:var(--text-muted)">Cargando...</p>';
       try {
         const items = await WTApi.listMedia(q, currentType);
-        grid.innerHTML = items.map(card).join('');
+        sections.innerHTML = renderSections(items);
         WT.refreshIcons();
         empty.classList.toggle('hidden', items.length > 0);
-        grid.classList.toggle('hidden', items.length === 0);
+        sections.classList.toggle('hidden', items.length === 0);
       } catch (err) {
-        grid.innerHTML = '';
+        sections.innerHTML = '';
         WT.toast(err.message, true);
       }
     }
