@@ -53,11 +53,13 @@
         <div class="thumb-wrap">
           ${thumb}
           ${item.duration_seconds ? `<span class="duration-badge">${WT.fmtDuration(item.duration_seconds)}</span>` : ''}
+          ${(() => { const status = WT.getWatchStatus(item.id, user); return `<span class="watch-status watch-status-${status.key}">${status.label}</span>`; })()}
         </div>
         <div class="mt-2">
           <p class="text-sm font-medium line-clamp-2">${item.title || item.file_name}</p>
           <p class="text-xs mt-1" style="color:var(--text-muted)">${meta || 'Sin metadata'}</p>
           <span class="type-badge mt-1 inline-block">${item.media_type}${item.favorite ? ' · ⭐' : ''}</span>
+          ${(() => { const status = WT.getWatchStatus(item.id, user); return status.key === 'progress' ? `<div class="watch-progress mt-2"><span style="width:${Math.min(100, status.percent || 0)}%"></span></div>` : ''; })()}
         </div>
       </a>`;
     }

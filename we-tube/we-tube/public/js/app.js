@@ -1,5 +1,70 @@
 // app.js — utilidades compartidas por todas las paginas
 window.WT = (function () {
+  const WATCH_STATE_PREFIX = 'wt-watch-state:';
+
+  function watchStateKey(user) {
+    const identity = user && (user.id || user.username) || 'anonymous';
+    return WATCH_STATE_PREFIX + identity;
+  }
+
+  function readWatchState(user) {
+    try {
+      return JSON.parse(localStorage.getItem(watchStateKey(user)) || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function writeWatchState(user, state) {
+    try {
+      localStorage.setItem(watchStateKey(user), JSON.stringify(state));
+    } catch (e) { /* localStorage puede estar deshabilitado */ }
+  }
+
+  function getWatchStatus(mediaId, user) {
+    const entry = readWatchState(user)[mediaId];
+    if (!entry) return { key: 'new', label: 'Nuevo' };
+    if (entry.completed) return { key: 'watched', label: 'Visto' };
+    return { key: 'progress', label: 'A medias', percent: entry.duration ? (entry.position / entry.duration) * 100 : 0 };
+  }
+
+  function savePlayback(mediaId, user, position, duration, completed) {
+    const state = readWatchState(user);
+    state[mediaId] = {
+      position: Math.max(0, position || 0),
+      duration: Math.max(0, duration || 0),
+      completed: Boolean(completed),
+      updatedAt: Date.now(),
+    };
+    writeWatchState(user, state);
+  }
+
+  function trackPlayback(mediaId, user, element) {
+    let lastSavedAt = 0;
+    const save = (completed) => {
+      const now = Date.now();
+      if (!completed && now - lastSavedAt < 3000) return;
+      lastSavedAt = now;
+      const duration = element.duration || 0;
+      const position = element.currentTime || 0;
+      savePlayback(mediaId, user, position, duration, completed || (duration > 0 && position / duration >= 0.9));
+    };
+    element.addEventListener('timeupdate', () => save(false));
+    element.addEventListener('pause', () => save(false));
+    element.addEventListener('ended', () => save(true));
+
+    const entry = readWatchState(user)[mediaId];
+    if (entry && !entry.completed) {
+      element.addEventListener('loadedmetadata', () => {
+        if (entry.position > 0 && entry.position < element.duration * 0.9) element.currentTime = entry.position;
+      }, { once: true });
+    }
+  }
+
+  function markViewed(mediaId, user) {
+    savePlayback(mediaId, user, 1, 1, true);
+  }
+
   function toast(msg, isError) {
     const el = document.createElement('div');
     el.className = 'toast';
@@ -82,5 +147,5 @@ window.WT = (function () {
     }
   }
 
-  return { toast, fmtViews, fmtDuration, fmtDate, fmtBytes, guard, renderNav };
+  return { toast, fmtViews, fmtDuration, fmtDate, fmtBytes, guard, renderNav, getWatchStatus, trackPlayback, markViewed };
 })();
