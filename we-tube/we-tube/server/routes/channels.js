@@ -27,7 +27,14 @@ router.post('/', requireAuth, async (req, res) => {
     'INSERT INTO channels (owner_id, channel_url, channel_name) VALUES ($1,$2,$3) RETURNING *',
     [identity.ownerIdForDb, channelUrl, channelName || null]
   );
-  res.status(201).json(rows[0]);
+  try {
+    const initialCheck = await channelsService.checkChannel(rows[0].id);
+    console.log(`[channels] Carga inicial de ${channelUrl}: ${initialCheck.enqueued} videos encolados.`);
+    res.status(201).json({ ...rows[0], initialCheck });
+  } catch (err) {
+    console.error(`[channels] Error en la carga inicial de ${channelUrl}:`, err.message);
+    res.status(502).json({ error: `No se pudo revisar el canal: ${err.message}`, channel: rows[0] });
+  }
 });
 
 router.delete('/:id', requireAuth, async (req, res) => {

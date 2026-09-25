@@ -149,7 +149,7 @@ function runDownload(options, outputDir, onProgress, onLog) {
 /** Lista videos de un canal/playlist en modo "flat" (sin descargar), para deteccion de novedades */
 function listChannelVideos(channelUrl) {
   return new Promise((resolve, reject) => {
-    const args = ['--flat-playlist', '--print', '%(id)s|||%(title)s|||%(webpage_url)s', channelUrl];
+    const args = ['--flat-playlist', '--playlist-end', '5', '--print', '%(id)s|||%(title)s|||%(webpage_url)s', channelUrl];
     const proc = spawn(BIN, args);
     let out = '';
     let err = '';
