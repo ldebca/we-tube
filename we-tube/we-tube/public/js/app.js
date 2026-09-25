@@ -1,6 +1,7 @@
 // app.js — utilidades compartidas por todas las paginas
 window.WT = (function () {
   const WATCH_STATE_PREFIX = 'wt-watch-state:';
+  const AUTOPLAY_PREFIX = 'wt-autoplay:';
 
   function watchStateKey(user) {
     const identity = user && (user.id || user.username) || 'anonymous';
@@ -18,6 +19,25 @@ window.WT = (function () {
   function writeWatchState(user, state) {
     try {
       localStorage.setItem(watchStateKey(user), JSON.stringify(state));
+    } catch (e) { /* localStorage puede estar deshabilitado */ }
+  }
+
+  function autoplayKey(user) {
+    const identity = user && (user.id || user.username) || 'anonymous';
+    return AUTOPLAY_PREFIX + identity;
+  }
+
+  function getAutoplay(user) {
+    try {
+      return localStorage.getItem(autoplayKey(user)) === 'true';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function setAutoplay(user, enabled) {
+    try {
+      localStorage.setItem(autoplayKey(user), String(Boolean(enabled)));
     } catch (e) { /* localStorage puede estar deshabilitado */ }
   }
 
@@ -147,5 +167,5 @@ window.WT = (function () {
     }
   }
 
-  return { toast, fmtViews, fmtDuration, fmtDate, fmtBytes, guard, renderNav, getWatchStatus, trackPlayback, markViewed };
+  return { toast, fmtViews, fmtDuration, fmtDate, fmtBytes, guard, renderNav, getWatchStatus, trackPlayback, markViewed, getAutoplay, setAutoplay };
 })();
