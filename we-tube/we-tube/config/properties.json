@@ -1,0 +1,38 @@
+{
+  "server": {
+    "port": 4000,
+    "publicUrl": "http://localhost:4000"
+  },
+  "media": {
+    "rootDir": "./media",
+    "allowedVideoExt": [".mp4", ".webm", ".mkv", ".mov"],
+    "allowedAudioExt": [".mp3", ".m4a", ".ogg", ".wav"],
+    "allowedImageExt": [".jpg", ".jpeg", ".png", ".gif", ".webp"],
+    "maxUploadSizeMB": 4096
+  },
+  "cleanup": {
+    "enabled": true,
+    "maxAgeDays": 30,
+    "cronSchedule": "0 3 * * *",
+    "comment": "Corre todos los dias a las 3:00 AM. Borra archivos (y su registro) con mas de maxAgeDays dias, excepto los marcados como favoritos."
+  },
+  "ytdlp": {
+    "binaryPath": "yt-dlp",
+    "defaultFormat": "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+    "cookiesFile": "",
+    "rateLimit": "",
+    "concurrentFragments": 4,
+    "writeInfoJson": true,
+    "writeThumbnail": true,
+    "embedMetadata": true
+  },
+  "channels": {
+    "checkIntervalCron": "0 */6 * * *",
+    "comment": "Revisa canales suscritos cada 6 horas en busca de videos nuevos"
+  },
+  "auth": {
+    "jwtSecret": "CHANGE_ME_IN_PRODUCTION",
+    "jwtExpiresIn": "7d",
+    "allowRegistration": true
+  }
+}

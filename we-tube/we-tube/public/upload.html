@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>we-tube · Subir</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/styles.css"/>
+<script src="/js/theme.js"></script>
+</head>
+<body>
+  <div id="wt-nav"></div>
+  <div class="max-w-xl mx-auto px-4 py-8">
+    <h1 class="text-xl font-semibold mb-1">Subir archivo</h1>
+    <p class="text-sm mb-5" style="color:var(--text-muted)">Video, audio o imagen. Se guarda directamente en tu carpeta del catalogo.</p>
+
+    <label id="dropzone" class="card rounded-2xl p-10 flex flex-col items-center gap-2 cursor-pointer border-dashed" style="border-style:dashed">
+      <span class="text-3xl">⬆️</span>
+      <span class="font-medium">Arrastra un archivo o haz clic para elegir</span>
+      <span class="text-xs" style="color:var(--text-muted)">mp4, webm, mkv, mp3, m4a, jpg, png, gif, webp...</span>
+      <input id="file-input" type="file" class="hidden" accept="video/*,audio/*,image/*"/>
+    </label>
+
+    <div id="progress-box" class="card rounded-xl p-4 mt-4 hidden">
+      <p id="progress-name" class="text-sm font-medium mb-2"></p>
+      <div class="progress-track"><div id="progress-fill" class="progress-fill" style="width:0%"></div></div>
+      <p class="text-xs mt-2" style="color:var(--text-muted)">Puedes navegar a otras paginas: la subida continua en segundo plano.</p>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    (async () => {
+      const user = await WT.guard();
+      if (!user) return;
+      WT.renderNav('upload', user);
+
+      const input = document.getElementById('file-input');
+      const dropzone = document.getElementById('dropzone');
+      dropzone.addEventListener('click', () => input.click());
+      dropzone.addEventListener('dragover', (e) => e.preventDefault());
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+      });
+      input.addEventListener('change', () => { if (input.files[0]) handleFile(input.files[0]); });
+
+      async function handleFile(file) {
+        document.getElementById('progress-box').classList.remove('hidden');
+        document.getElementById('progress-name').textContent = file.name;
+        try {
+          await WTApi.upload(file, (pct) => {
+            document.getElementById('progress-fill').style.width = pct + '%';
+          });
+          WT.toast('Archivo subido correctamente');
+          setTimeout(() => { window.location.href = '/index.html'; }, 700);
+        } catch (err) {
+          WT.toast(err.message, true);
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

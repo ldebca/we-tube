@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>we-tube · Descargar</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/styles.css"/>
+<script src="/js/theme.js"></script>
+</head>
+<body>
+  <div id="wt-nav"></div>
+  <div class="max-w-2xl mx-auto px-4 py-8">
+    <div id="ytdlp-warning" class="hidden card rounded-xl p-4 mb-5" style="border-color:var(--danger)">
+      ⚠️ No se detecto <code>yt-dlp</code> en el servidor. Instalalo desde
+      <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" style="color:var(--accent)">github.com/yt-dlp/yt-dlp</a> y asegurate de que este en el PATH.
+    </div>
+
+    <h1 class="text-xl font-semibold mb-1">Descargar contenido</h1>
+    <p class="text-sm mb-5" style="color:var(--text-muted)">Pega la URL de un video, playlist o canal. Usa yt-dlp por debajo.</p>
+
+    <form id="dl-form" class="card rounded-2xl p-5 space-y-4">
+      <div>
+        <label class="text-sm font-medium block mb-1">URL</label>
+        <input id="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required/>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm font-medium block mb-1">Tipo</label>
+          <select id="mode">
+            <option value="video">Video</option>
+            <option value="audio">Solo audio</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-medium block mb-1">Calidad</label>
+          <select id="quality">
+            <option value="best">La mejor disponible</option>
+            <option value="2160">4K (2160p)</option>
+            <option value="1440">2K (1440p)</option>
+            <option value="1080" selected>1080p</option>
+            <option value="720">720p</option>
+            <option value="480">480p</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input id="isPlaylist" type="checkbox" class="w-auto"/>
+        <label for="isPlaylist" class="text-sm">Es una lista de reproduccion completa (requisito 17)</label>
+      </div>
+      <div id="playlist-items-wrap" class="hidden">
+        <label class="text-sm font-medium block mb-1">Elementos a descargar (opcional, ej: 1-5,8)</label>
+        <input id="playlistItems" type="text" placeholder="Todos por defecto"/>
+      </div>
+
+      <details class="text-sm">
+        <summary class="cursor-pointer font-medium">Opciones avanzadas de yt-dlp</summary>
+        <div class="mt-3 space-y-3">
+          <div class="flex items-center gap-2">
+            <input id="subtitles" type="checkbox" class="w-auto"/>
+            <label for="subtitles">Descargar subtitulos</label>
+            <input id="subLangs" type="text" placeholder="es,en" style="max-width:120px"/>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs block mb-1" style="color:var(--text-muted)">Formato de audio (si aplica)</label>
+              <select id="audioFormat"><option value="mp3">mp3</option><option value="m4a">m4a</option><option value="opus">opus</option></select>
+            </div>
+            <div>
+              <label class="text-xs block mb-1" style="color:var(--text-muted)">Limite de velocidad</label>
+              <input id="rateLimit" type="text" placeholder="ej: 2M"/>
+            </div>
+          </div>
+          <div>
+            <label class="text-xs block mb-1" style="color:var(--text-muted)">Proxy</label>
+            <input id="proxy" type="text" placeholder="socks5://127.0.0.1:1080"/>
+          </div>
+          <div>
+            <label class="text-xs block mb-1" style="color:var(--text-muted)">Ruta a archivo de cookies (para contenido privado)</label>
+            <input id="cookiesFile" type="text" placeholder="/ruta/al/cookies.txt"/>
+          </div>
+          <div>
+            <label class="text-xs block mb-1" style="color:var(--text-muted)">Argumentos extra de yt-dlp (flags CLI completos)</label>
+            <textarea id="extraArgs" rows="2" placeholder="--sponsorblock-remove sponsor --embed-chapters"></textarea>
+            <p class="text-xs mt-1" style="color:var(--text-muted)">Cualquier flag soportado por yt-dlp puede escribirse aqui, para control total.</p>
+          </div>
+        </div>
+      </details>
+
+      <button type="submit" id="dl-submit" class="btn-primary w-full">Iniciar descarga en segundo plano</button>
+    </form>
+
+    <div id="jobs-list" class="mt-6 space-y-3"></div>
+
+    <hr class="my-8" style="border-color:var(--border)"/>
+
+    <h2 class="text-lg font-semibold mb-1">Canales monitoreados</h2>
+    <p class="text-sm mb-4" style="color:var(--text-muted)">we-tube revisa estos canales periodicamente y descarga automaticamente los videos nuevos (requisito 18).</p>
+    <form id="channel-form" class="flex gap-2 mb-4">
+      <input id="channel-url" type="url" placeholder="https://www.youtube.com/@canal" required/>
+      <button class="btn-ghost shrink-0">Agregar</button>
+    </form>
+    <div id="channels-list" class="space-y-2"></div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    (async () => {
+      const user = await WT.guard();
+      if (!user) return;
+      WT.renderNav('download', user);
+
+      WTApi.ytdlpVersion().then((v) => {
+        if (!v.available) document.getElementById('ytdlp-warning').classList.remove('hidden');
+      });
+
+      document.getElementById('isPlaylist').addEventListener('change', (e) => {
+        document.getElementById('playlist-items-wrap').classList.toggle('hidden', !e.target.checked);
+      });
+
+      document.getElementById('dl-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('dl-submit');
+        btn.disabled = true; btn.textContent = 'Encolando...';
+        try {
+          const payload = {
+            url: document.getElementById('url').value,
+            mode: document.getElementById('mode').value,
+            quality: document.getElementById('quality').value,
+            audioFormat: document.getElementById('audioFormat').value,
+            isPlaylist: document.getElementById('isPlaylist').checked,
+            playlistItems: document.getElementById('playlistItems').value,
+            subtitles: document.getElementById('subtitles').checked,
+            subLangs: document.getElementById('subLangs').value,
+            rateLimit: document.getElementById('rateLimit').value,
+            proxy: document.getElementById('proxy').value,
+            cookiesFile: document.getElementById('cookiesFile').value,
+            extraArgs: document.getElementById('extraArgs').value,
+          };
+          const r = await WTApi.startDownload(payload);
+          WT.toast('Descarga encolada. Puedes seguir navegando.');
+          document.getElementById('dl-form').reset();
+          trackJob(r.jobId);
+          refreshJobs();
+        } catch (err) {
+          WT.toast(err.message, true);
+        } finally {
+          btn.disabled = false; btn.textContent = 'Iniciar descarga en segundo plano';
+        }
+      });
+
+      function jobRow(job) {
+        const pct = Number(job.progress || 0);
+        const statusLabel = { queued: 'En cola', running: 'Descargando', done: 'Completado', error: 'Error' }[job.status] || job.status;
+        return `<div class="card rounded-xl p-4" data-job="${job.id}">
+          <div class="flex justify-between text-sm mb-2">
+            <span class="truncate max-w-[70%]" style="color:var(--text-muted)">${job.url}</span>
+            <span class="font-medium">${statusLabel}</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          ${job.status === 'error' ? `<p class="text-xs mt-2" style="color:var(--danger)">${job.error || ''}</p>` : ''}
+        </div>`;
+      }
+
+      async function refreshJobs() {
+        try {
+          const jobs = await WTApi.listJobs();
+          document.getElementById('jobs-list').innerHTML = jobs.map(jobRow).join('');
+        } catch (e) { /* silencioso */ }
+      }
+
+      function trackJob(id) {
+        const interval = setInterval(async () => {
+          try {
+            const job = await WTApi.getJob(id);
+            const row = document.querySelector(`[data-job="${id}"]`);
+            if (row) row.outerHTML = jobRow(job);
+            if (job.status === 'done' || job.status === 'error') {
+              clearInterval(interval);
+              if (job.status === 'done') WT.toast('Descarga completada: ' + job.url);
+            }
+          } catch (e) { clearInterval(interval); }
+        }, 2000);
+      }
+
+      refreshJobs();
+      setInterval(refreshJobs, 8000);
+
+      // --- Canales ---
+      async function loadChannels() {
+        const channels = await WTApi.listChannels();
+        document.getElementById('channels-list').innerHTML = channels.map((c) => `
+          <div class="card rounded-xl p-3 flex justify-between items-center text-sm">
+            <span class="truncate">${c.channel_name || c.channel_url}</span>
+            <button data-id="${c.id}" class="wt-remove-channel btn-ghost">Quitar</button>
+          </div>`).join('') || `<p class="text-sm" style="color:var(--text-muted)">Sin canales agregados aun.</p>`;
+
+        document.querySelectorAll('.wt-remove-channel').forEach((btn) => {
+          btn.onclick = async () => { await WTApi.removeChannel(btn.dataset.id); loadChannels(); };
+        });
+      }
+      document.getElementById('channel-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          await WTApi.addChannel(document.getElementById('channel-url').value);
+          document.getElementById('channel-url').value = '';
+          WT.toast('Canal agregado. Se revisara automaticamente.');
+          loadChannels();
+        } catch (err) { WT.toast(err.message, true); }
+      });
+      loadChannels();
+    })();
+  </script>
+</body>
+</html>

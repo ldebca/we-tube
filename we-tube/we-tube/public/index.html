@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>we-tube</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/styles.css"/>
+<script src="/js/theme.js"></script>
+</head>
+<body>
+  <div id="wt-nav"></div>
+
+  <div class="px-4 md:px-6 py-4">
+    <div class="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
+      <button data-type="" class="wt-filter btn-ghost !border-0" style="background:var(--accent-soft);color:var(--accent)">Todo</button>
+      <button data-type="video" class="wt-filter btn-ghost !border-0">🎬 Videos</button>
+      <button data-type="audio" class="wt-filter btn-ghost !border-0">🎵 Audio</button>
+      <button data-type="image" class="wt-filter btn-ghost !border-0">🖼️ Imagenes</button>
+    </div>
+
+    <div id="empty-state" class="hidden text-center py-24">
+      <p class="text-lg font-medium mb-1">Tu catalogo esta vacio</p>
+      <p class="text-sm mb-4" style="color:var(--text-muted)">Descarga contenido con yt-dlp o sube tus propios archivos para empezar.</p>
+      <div class="flex justify-center gap-3">
+        <a href="/download.html" class="btn-primary">Descargar de una URL</a>
+        <a href="/upload.html" class="btn-ghost">Subir archivo</a>
+      </div>
+    </div>
+
+    <div id="grid" class="grid gap-x-4 gap-y-6" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));"></div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    let currentType = '';
+    let user = null;
+
+    function card(item) {
+      const thumb = item.thumbnail_path
+        ? `<img src="/media-files/${item.thumbnail_path}" loading="lazy"/>`
+        : item.media_type === 'image'
+          ? `<img src="/media-files/${item.relative_path}" loading="lazy"/>`
+          : `<div class="w-full h-full flex items-center justify-center text-3xl">${item.media_type === 'audio' ? '🎵' : '🎬'}</div>`;
+
+      const meta = [item.channel_name, WT.fmtViews(item.view_count), WT.fmtDate(item.published_at || item.created_at)]
+        .filter(Boolean).join(' · ');
+
+      return `
+      <a href="/watch.html?id=${item.id}" class="video-card block">
+        <div class="thumb-wrap">
+          ${thumb}
+          ${item.duration_seconds ? `<span class="duration-badge">${WT.fmtDuration(item.duration_seconds)}</span>` : ''}
+        </div>
+        <div class="mt-2">
+          <p class="text-sm font-medium line-clamp-2">${item.title || item.file_name}</p>
+          <p class="text-xs mt-1" style="color:var(--text-muted)">${meta || 'Sin metadata'}</p>
+          <span class="type-badge mt-1 inline-block">${item.media_type}${item.favorite ? ' · ⭐' : ''}</span>
+        </div>
+      </a>`;
+    }
+
+    async function load(q) {
+      const grid = document.getElementById('grid');
+      const empty = document.getElementById('empty-state');
+      grid.innerHTML = '<p style="color:var(--text-muted)" class="col-span-full">Cargando...</p>';
+      try {
+        const items = await WTApi.listMedia(q, currentType);
+        grid.innerHTML = items.map(card).join('');
+        empty.classList.toggle('hidden', items.length > 0);
+        grid.classList.toggle('hidden', items.length === 0);
+      } catch (err) {
+        grid.innerHTML = '';
+        WT.toast(err.message, true);
+      }
+    }
+
+    document.querySelectorAll('.wt-filter').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentType = btn.dataset.type;
+        document.querySelectorAll('.wt-filter').forEach((b) => {
+          b.style.background = ''; b.style.color = '';
+        });
+        btn.style.background = 'var(--accent-soft)'; btn.style.color = 'var(--accent)';
+        load(new URLSearchParams(location.search).get('q'));
+      });
+    });
+
+    (async () => {
+      user = await WT.guard();
+      if (!user) return;
+      WT.renderNav('home', user);
+      const q = new URLSearchParams(location.search).get('q');
+      if (q) document.getElementById('wt-search').value = q;
+      load(q);
+    })();
+  </script>
+</body>
+</html>

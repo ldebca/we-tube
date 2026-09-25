@@ -1,0 +1,20 @@
+[Unit]
+Description=we-tube - alternativa local a YouTube
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+# Ajusta el usuario y las rutas a tu instalacion real
+User=wetube
+WorkingDirectory=/opt/we-tube
+EnvironmentFile=/opt/we-tube/.env
+ExecStart=/usr/bin/node /opt/we-tube/server/index.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=we-tube
+
+[Install]
+WantedBy=multi-user.target

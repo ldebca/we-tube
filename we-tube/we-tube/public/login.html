@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>we-tube · Iniciar sesion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/styles.css"/>
+<script src="/js/theme.js"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-sm">
+    <div class="flex justify-center mb-8"><img src="/assets/logo.svg" class="h-8" alt="we-tube"/></div>
+    <div class="card rounded-2xl p-6">
+      <h1 class="text-xl font-semibold mb-1">Bienvenido de nuevo</h1>
+      <p class="text-sm mb-5" style="color:var(--text-muted)">Tu coleccion local de video, audio e imagenes.</p>
+      <form id="login-form" class="space-y-3">
+        <input type="text" id="username" placeholder="Usuario o email" required/>
+        <input type="password" id="password" placeholder="Contraseña" required/>
+        <button type="submit" class="btn-primary w-full">Iniciar sesion</button>
+      </form>
+      <button id="incognito-btn" class="btn-ghost w-full mt-3">🕶 Entrar en modo incognito</button>
+      <p class="text-sm mt-4 text-center" style="color:var(--text-muted)">
+        ¿No tienes cuenta? <a href="/register.html" class="font-medium" style="color:var(--accent)">Crea una</a>
+      </p>
+    </div>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await WTApi.login(document.getElementById('username').value, document.getElementById('password').value);
+        window.location.href = '/index.html';
+      } catch (err) { WT.toast(err.message, true); }
+    });
+    document.getElementById('incognito-btn').addEventListener('click', async () => {
+      try {
+        await WTApi.incognito();
+        window.location.href = '/index.html';
+      } catch (err) { WT.toast(err.message, true); }
+    });
+  </script>
+</body>
+</html>

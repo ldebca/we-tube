@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>we-tube · Crear cuenta</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/styles.css"/>
+<script src="/js/theme.js"></script>
+</head>
+<body class="min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-sm">
+    <div class="flex justify-center mb-8"><img src="/assets/logo.svg" class="h-8" alt="we-tube"/></div>
+    <div class="card rounded-2xl p-6">
+      <h1 class="text-xl font-semibold mb-1">Crea tu cuenta</h1>
+      <p class="text-sm mb-5" style="color:var(--text-muted)">Cada usuario tiene su propio catalogo, separado del resto.</p>
+      <form id="register-form" class="space-y-3">
+        <input type="text" id="username" placeholder="Usuario" required minlength="3"/>
+        <input type="email" id="email" placeholder="Email" required/>
+        <input type="password" id="password" placeholder="Contraseña (min. 6 caracteres)" required minlength="6"/>
+        <button type="submit" class="btn-primary w-full">Crear cuenta</button>
+      </form>
+      <p class="text-sm mt-4 text-center" style="color:var(--text-muted)">
+        ¿Ya tienes cuenta? <a href="/login.html" class="font-medium" style="color:var(--accent)">Inicia sesion</a>
+      </p>
+    </div>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await WTApi.register(
+          document.getElementById('username').value,
+          document.getElementById('email').value,
+          document.getElementById('password').value
+        );
+        window.location.href = '/index.html';
+      } catch (err) { WT.toast(err.message, true); }
+    });
+  </script>
+</body>
+</html>

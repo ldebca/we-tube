@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>we-tube · Configuracion</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/css/styles.css"/>
+<script src="/js/theme.js"></script>
+</head>
+<body>
+  <div id="wt-nav"></div>
+  <div class="max-w-2xl mx-auto px-4 py-8">
+    <h1 class="text-xl font-semibold mb-1">Configuracion</h1>
+    <p class="text-sm mb-5" style="color:var(--text-muted)">Estos valores viven en <code>config/properties.json</code> en el servidor.</p>
+
+    <div id="admin-only" class="hidden">
+      <form id="cfg-form" class="card rounded-2xl p-5 space-y-4">
+        <div>
+          <label class="text-sm font-medium block mb-1">Directorio local de medios</label>
+          <input id="rootDir" type="text"/>
+          <p class="text-xs mt-1" style="color:var(--text-muted)">Ruta absoluta o relativa al servidor. Requiere reiniciar la app tras cambiarla.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex items-center gap-2 mt-2">
+            <input id="cleanupEnabled" type="checkbox" class="w-auto"/>
+            <label for="cleanupEnabled" class="text-sm">Limpieza automatica activa</label>
+          </div>
+          <div>
+            <label class="text-sm font-medium block mb-1">Borrar archivos con mas de (dias)</label>
+            <input id="maxAgeDays" type="number" min="1"/>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm font-medium block mb-1">Ruta al binario de yt-dlp</label>
+          <input id="ytdlpBin" type="text"/>
+        </div>
+        <button type="submit" class="btn-primary w-full">Guardar cambios</button>
+      </form>
+    </div>
+
+    <div id="not-admin" class="hidden card rounded-xl p-5 text-sm" style="color:var(--text-muted)">
+      Solo un usuario administrador puede editar la configuracion del servidor. Puedes ver los valores actuales a continuacion.
+    </div>
+
+    <pre id="cfg-view" class="card rounded-xl p-4 mt-4 text-xs overflow-auto"></pre>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    (async () => {
+      const user = await WT.guard();
+      if (!user) return;
+      WT.renderNav('settings', user);
+
+      const cfg = await WTApi.getConfig();
+      document.getElementById('cfg-view').textContent = JSON.stringify(cfg, null, 2);
+
+      if (user.isAdmin) {
+        document.getElementById('admin-only').classList.remove('hidden');
+        document.getElementById('rootDir').value = cfg.media.rootDir;
+        document.getElementById('cleanupEnabled').checked = cfg.cleanup.enabled;
+        document.getElementById('maxAgeDays').value = cfg.cleanup.maxAgeDays;
+        document.getElementById('ytdlpBin').value = cfg.ytdlp.binaryPath;
+
+        document.getElementById('cfg-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          try {
+            const updated = {
+              ...cfg,
+              media: { ...cfg.media, rootDir: document.getElementById('rootDir').value },
+              cleanup: { ...cfg.cleanup, enabled: document.getElementById('cleanupEnabled').checked, maxAgeDays: Number(document.getElementById('maxAgeDays').value) },
+              ytdlp: { ...cfg.ytdlp, binaryPath: document.getElementById('ytdlpBin').value },
+            };
+            await WTApi.saveConfig(updated);
+            WT.toast('Configuracion guardada. Reinicia el servidor si cambiaste el directorio.');
+          } catch (err) { WT.toast(err.message, true); }
+        });
+      } else {
+        document.getElementById('not-admin').classList.remove('hidden');
+      }
+    })();
+  </script>
+</body>
+</html>

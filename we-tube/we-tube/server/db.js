@@ -1,0 +1,101 @@
+// db.js
+// Pool de conexion a PostgreSQL + creacion idempotente del esquema.
+// Se usa "CREATE TABLE IF NOT EXISTS" para que el arranque del servidor
+// (ver index.js) pueda llamar a ensureSchema() cada vez sin romper nada.
+'use strict';
+
+const { Pool } = require('pg');
+const cfg = require('./config');
+
+const pool = new Pool({ ...cfg.db, connectionTimeoutMillis: 8000 });
+
+pool.on('error', (err) => {
+  // Log de monitoreo: errores inesperados del pool (conexiones caidas, etc.)
+  console.error('[db] Error inesperado en el pool de PostgreSQL:', err.message);
+});
+
+const SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username VARCHAR(64) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  is_admin BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS media (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  file_name TEXT NOT NULL,
+  relative_path TEXT NOT NULL,
+  media_type VARCHAR(16) NOT NULL, -- video | audio | image
+  title TEXT,
+  channel_name TEXT,
+  view_count BIGINT,
+  like_count BIGINT,
+  published_at TIMESTAMPTZ,
+  duration_seconds INTEGER,
+  thumbnail_path TEXT,
+  source_url TEXT,
+  favorite BOOLEAN NOT NULL DEFAULT FALSE,
+  is_incognito BOOLEAN NOT NULL DEFAULT FALSE,
+  incognito_session_id TEXT,
+  file_size_bytes BIGINT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_media_owner ON media(owner_id);
+CREATE INDEX IF NOT EXISTS idx_media_type ON media(media_type);
+CREATE INDEX IF NOT EXISTS idx_media_incognito ON media(incognito_session_id);
+
+CREATE TABLE IF NOT EXISTS download_jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'queued', -- queued|running|done|error
+  progress NUMERIC(5,2) NOT NULL DEFAULT 0,
+  options_json JSONB,
+  log TEXT,
+  error TEXT,
+  is_incognito BOOLEAN NOT NULL DEFAULT FALSE,
+  incognito_session_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_jobs_owner ON download_jobs(owner_id);
+
+CREATE TABLE IF NOT EXISTS channels (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  channel_url TEXT NOT NULL,
+  channel_name TEXT,
+  last_checked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_channels_owner ON channels(owner_id);
+`;
+
+async function ensureSchema() {
+  try {
+    await pool.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
+  } catch (e) {
+    console.warn('[db] No se pudo crear extension pgcrypto (puede requerir permisos de superusuario):', e.message);
+  }
+  await pool.query(SCHEMA_SQL);
+  console.log('[db] Esquema verificado/creado correctamente.');
+}
+
+module.exports = { pool, ensureSchema };
+
+// Permite ejecutar `npm run init-db` para inicializar el esquema manualmente
+if (require.main === module && process.argv.includes('--init')) {
+  ensureSchema()
+    .then(() => {
+      console.log('[db] Inicializacion completa.');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('[db] Fallo la inicializacion del esquema:', err);
+      process.exit(1);
+    });
+}

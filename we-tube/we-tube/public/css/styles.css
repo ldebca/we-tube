@@ -1,0 +1,118 @@
+/* styles.css
+   Tokens de diseño de we-tube.
+   Paleta: violeta electrico (#7C3AED) sobre fondo casi-negro aubergine,
+   con acento teal (#22D3AA) para estados "en vivo/progreso". Tipografia:
+   Space Grotesk para titulos, Inter para UI/cuerpo. */
+
+:root {
+  --bg: #FAF9FC;
+  --bg-elevated: #FFFFFF;
+  --bg-hover: #F1EEF7;
+  --border: #E4E1EA;
+  --text: #1B1523;
+  --text-muted: #6B6478;
+  --accent: #7C3AED;
+  --accent-hover: #6D28D9;
+  --accent-soft: #EDE6FB;
+  --teal: #0F9D77;
+  --danger: #DC2626;
+}
+
+[data-theme="dark"] {
+  --bg: #121016;
+  --bg-elevated: #1B1822;
+  --bg-hover: #262230;
+  --border: #322D3C;
+  --text: #F5F3F7;
+  --text-muted: #9C96AA;
+  --accent: #9163F5;
+  --accent-hover: #A578F7;
+  --accent-soft: #2A2140;
+  --teal: #22D3AA;
+  --danger: #F87171;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+h1, h2, h3, .display {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.video-card { cursor: pointer; }
+.video-card .thumb-wrap {
+  aspect-ratio: 16/9;
+  background: var(--bg-hover);
+  overflow: hidden;
+  border-radius: 10px;
+  position: relative;
+}
+.video-card .thumb-wrap img,
+.video-card .thumb-wrap video {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.video-card .duration-badge {
+  position: absolute; bottom: 6px; right: 6px;
+  background: rgba(0,0,0,0.75); color: #fff;
+  font-size: 11px; padding: 1px 5px; border-radius: 4px;
+}
+.type-badge {
+  font-size: 10px; padding: 1px 6px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+  text-transform: capitalize;
+}
+
+.sidebar-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 12px; border-radius: 10px; color: var(--text-muted);
+  font-size: 14px; font-weight: 500;
+}
+.sidebar-link:hover { background: var(--bg-hover); color: var(--text); }
+.sidebar-link.active { background: var(--accent-soft); color: var(--accent); }
+
+.btn-primary {
+  background: var(--accent); color: white; border-radius: 10px;
+  padding: 8px 16px; font-weight: 600; font-size: 14px;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-ghost {
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 16px; font-weight: 500; font-size: 14px; color: var(--text);
+}
+.btn-ghost:hover { background: var(--bg-hover); }
+
+input[type=text], input[type=password], input[type=email], input[type=url], input[type=number], select, textarea {
+  background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text);
+  border-radius: 10px; padding: 9px 12px; font-size: 14px; width: 100%;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.progress-track {
+  height: 6px; border-radius: 999px; background: var(--bg-hover); overflow: hidden;
+}
+.progress-fill {
+  height: 100%; background: var(--teal); transition: width 0.3s ease;
+}
+
+.toast {
+  position: fixed; bottom: 20px; right: 20px; z-index: 60;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  padding: 12px 16px; border-radius: 10px; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
