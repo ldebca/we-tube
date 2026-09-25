@@ -11,7 +11,7 @@
 </head>
 <body>
   <div id="wt-nav"></div>
-  <div class="max-w-2xl mx-auto px-4 py-8">
+  <div class="download-page">
     <div id="ytdlp-warning" class="hidden card rounded-xl p-4 mb-5" style="border-color:var(--danger)">
       ⚠️ No se detecto <code>yt-dlp</code> en el servidor. Instalalo desde
       <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" style="color:var(--accent)">github.com/yt-dlp/yt-dlp</a> y asegurate de que este en el PATH.
@@ -20,7 +20,9 @@
     <h1 class="text-xl font-semibold mb-1">Descargar contenido</h1>
     <p class="text-sm mb-5" style="color:var(--text-muted)">Pega la URL de un video, playlist o canal. Usa yt-dlp por debajo.</p>
 
-    <form id="dl-form" class="card rounded-2xl p-5 space-y-4">
+    <div class="download-layout">
+      <main class="download-main">
+      <form id="dl-form" class="card rounded-2xl p-5 space-y-4">
       <div>
         <label class="text-sm font-medium block mb-1">URL</label>
         <input id="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required/>
@@ -91,19 +93,36 @@
       </details>
 
       <button type="submit" id="dl-submit" class="btn-primary w-full">Iniciar descarga en segundo plano</button>
-    </form>
+      </form>
 
-    <div id="jobs-list" class="mt-6 space-y-3"></div>
+      <section class="jobs-section mt-6">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <h2 class="text-lg font-semibold">Cola de descargas</h2>
+            <p class="text-xs mt-1" style="color:var(--text-muted)">Las descargas activas permanecen visibles; se muestran hasta cinco completadas.</p>
+          </div>
+          <span id="jobs-count" class="text-xs shrink-0" style="color:var(--text-muted)"></span>
+        </div>
+        <div id="jobs-list" class="space-y-3"></div>
+      </section>
+      </main>
 
-    <hr class="my-8" style="border-color:var(--border)"/>
+      <aside class="channels-panel card rounded-2xl p-5">
+        <div class="flex items-start justify-between gap-3 mb-1">
+          <div>
+            <h2 class="text-lg font-semibold">Canales monitoreados</h2>
+            <p class="text-sm mt-1" style="color:var(--text-muted)">Se revisan periódicamente y descargan automáticamente los videos nuevos.</p>
+          </div>
+          <span class="text-xl" aria-hidden="true">📡</span>
+        </div>
 
-    <h2 class="text-lg font-semibold mb-1">Canales monitoreados</h2>
-    <p class="text-sm mb-4" style="color:var(--text-muted)">we-tube revisa estos canales periodicamente y descarga automaticamente los videos nuevos (requisito 18).</p>
-    <form id="channel-form" class="flex gap-2 mb-4">
-      <input id="channel-url" type="url" placeholder="https://www.youtube.com/@canal" required/>
-      <button class="btn-ghost shrink-0">Agregar</button>
-    </form>
-    <div id="channels-list" class="space-y-2"></div>
+        <form id="channel-form" class="channel-form mt-4 mb-4">
+          <input id="channel-url" type="url" placeholder="https://www.youtube.com/@canal" required/>
+          <button class="btn-ghost shrink-0">Agregar</button>
+        </form>
+        <div id="channels-list" class="space-y-2"></div>
+      </aside>
+    </div>
   </div>
 
   <script src="/js/api.js"></script>
@@ -113,6 +132,8 @@
       const user = await WT.guard();
       if (!user) return;
       WT.renderNav('download', user);
+      const dismissedJobs = new Set();
+      const MAX_COMPLETED_JOBS = 5;
 
       WTApi.ytdlpVersion().then((v) => {
         if (!v.available) document.getElementById('ytdlp-warning').classList.remove('hidden');
@@ -169,7 +190,14 @@
       async function refreshJobs() {
         try {
           const jobs = await WTApi.listJobs();
-          document.getElementById('jobs-list').innerHTML = jobs.map(jobRow).join('');
+          const activeJobs = jobs.filter((job) => job.status !== 'done' && !dismissedJobs.has(job.id));
+          const completedJobs = jobs
+            .filter((job) => job.status === 'done' && !dismissedJobs.has(job.id))
+            .slice(0, MAX_COMPLETED_JOBS);
+          const visibleJobs = [...activeJobs, ...completedJobs];
+          document.getElementById('jobs-count').textContent = visibleJobs.length ? `${visibleJobs.length} visibles` : '';
+          document.getElementById('jobs-list').innerHTML = visibleJobs.map(jobRow).join('') ||
+            '<p class="empty-panel text-sm">No hay descargas recientes.</p>';
         } catch (e) { /* silencioso */ }
       }
 
@@ -181,7 +209,13 @@
             if (row) row.outerHTML = jobRow(job);
             if (job.status === 'done' || job.status === 'error') {
               clearInterval(interval);
-              if (job.status === 'done') WT.toast('Descarga completada: ' + job.url);
+              if (job.status === 'done') {
+                WT.toast('Descarga completada: ' + job.url);
+                setTimeout(() => {
+                  dismissedJobs.add(job.id);
+                  refreshJobs();
+                }, 5000);
+              }
             }
           } catch (e) { clearInterval(interval); }
         }, 2000);

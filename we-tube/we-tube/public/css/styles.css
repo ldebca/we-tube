@@ -156,6 +156,26 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   height: 100%; background: var(--teal); transition: width 0.3s ease;
 }
 
+.download-page {
+  width: 100%; max-width: 1500px; margin-inline: auto; padding: clamp(1.25rem, 3vw, 3rem);
+}
+.download-layout {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  align-items: start; gap: clamp(1.5rem, 3vw, 3rem);
+}
+.download-main { min-width: 0; }
+.channels-panel { position: sticky; top: 1rem; }
+.channel-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.empty-panel {
+  padding: 1.5rem; text-align: center; color: var(--text-muted);
+  border: 1px dashed var(--border); border-radius: 10px;
+}
+@media (max-width: 900px) {
+  .download-page { padding: 1rem; }
+  .download-layout { grid-template-columns: 1fr; }
+  .channels-panel { position: static; }
+}
+
 .toast {
   position: fixed; bottom: 20px; right: 20px; z-index: 60;
   background: var(--bg-elevated); border: 1px solid var(--border);
