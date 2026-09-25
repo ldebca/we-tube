@@ -85,7 +85,7 @@ async function start() {
   const ytdlpVersion = await ytdlp.getVersion();
   if (!ytdlpVersion) {
     console.warn(
-      '[startup] ADVERTENCIA: no se detecto yt-dlp en el PATH del servidor. ' +
+      `[startup] ADVERTENCIA: no se pudo ejecutar yt-dlp desde "${ytdlp.BIN}". ` +
         'Las descargas fallaran hasta instalarlo: https://github.com/yt-dlp/yt-dlp'
     );
   } else {

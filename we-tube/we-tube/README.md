@@ -17,9 +17,12 @@ modo incógnito que borra todo al cerrar sesión.
 
 1. **Node.js 18+**
 2. **PostgreSQL** accesible (por defecto se usa `172.18.0.2:5432`, configurable en `.env`)
-3. **yt-dlp** instalado en el servidor y disponible en el `PATH` (o indicar su
-   ruta completa en `config/properties.json -> ytdlp.binaryPath`):
+3. **yt-dlp** instalado en el servidor. Puedes indicar su ruta completa en
+  `.env` con `YTDLP_PATH` (esta variable tiene prioridad sobre
+  `config/properties.json -> ytdlp.binaryPath`):
    ```bash
+  YTDLP_PATH=/opt/yt-dlp/yt-dlp
+
    # Instalacion recomendada por el propio proyecto (siempre la ultima version):
    sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
    sudo chmod a+rx /usr/local/bin/yt-dlp
@@ -52,7 +55,7 @@ editable por un usuario administrador desde **Configuracion** en la web):
 | `media` | `allowed*Ext` | Extensiones aceptadas por tipo |
 | `media` | `maxUploadSizeMB` | Limite de subida manual |
 | `cleanup` | `enabled`, `maxAgeDays`, `cronSchedule` | Borrado automatico de archivos viejos (los marcados como favoritos se conservan) |
-| `ytdlp` | `binaryPath`, `defaultFormat`, `cookiesFile`, `rateLimit`, `concurrentFragments` | Parametros por defecto de las descargas |
+| `ytdlp` | `binaryPath`, `defaultFormat`, `cookiesFile`, `rateLimit`, `concurrentFragments` | Parametros por defecto de las descargas; `YTDLP_PATH` en `.env` tiene prioridad para la ruta del binario |
 | `channels` | `checkIntervalCron` | Frecuencia de revision de canales suscritos |
 | `auth` | `jwtSecret`, `jwtExpiresIn`, `allowRegistration` | Autenticacion. **Cambia `jwtSecret` en produccion** (o usa `JWT_SECRET` en `.env`, tiene prioridad) |
 

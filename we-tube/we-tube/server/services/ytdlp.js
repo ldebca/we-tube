@@ -17,7 +17,7 @@ const path = require('path');
 const fs = require('fs');
 const cfg = require('../config');
 
-const BIN = cfg.properties.ytdlp.binaryPath || 'yt-dlp';
+const BIN = cfg.ytdlpPath;
 
 function getVersion() {
   return new Promise((resolve) => {
