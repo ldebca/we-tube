@@ -187,7 +187,11 @@
           WT.refreshIcons();
         };
         document.getElementById('delete-btn').onclick = async () => {
-          if (!confirm('¿Eliminar este archivo permanentemente?')) return;
+          const confirmed = await WT.confirmDialog('¿Eliminar este archivo permanentemente?', {
+            title: 'Eliminar archivo',
+            confirmLabel: 'Eliminar',
+          });
+          if (!confirmed) return;
           await WTApi.deleteMedia(item.id);
           WT.toast('Archivo eliminado');
           window.location.href = '/index.html';

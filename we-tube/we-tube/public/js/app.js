@@ -98,6 +98,45 @@ window.WT = (function () {
     setTimeout(() => el.remove(), 3500);
   }
 
+  function confirmDialog(message, options = {}) {
+    return new Promise((resolve) => {
+      const title = options.title || 'Confirmar acción';
+      const confirmLabel = options.confirmLabel || 'Confirmar';
+      const modal = document.createElement('div');
+      modal.className = 'modal-backdrop';
+      modal.innerHTML = `
+        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+          <div class="confirm-modal-icon"><i data-lucide="triangle-alert" class="section-icon"></i></div>
+          <h2 id="confirm-title" class="text-lg font-semibold">${title}</h2>
+          <p class="text-sm mt-2" style="color:var(--text-muted)"></p>
+          <div class="confirm-modal-actions">
+            <button type="button" data-confirm-cancel class="btn-ghost">Cancelar</button>
+            <button type="button" data-confirm-ok class="btn-primary">${confirmLabel}</button>
+          </div>
+        </div>`;
+      modal.querySelector('p').textContent = message;
+      document.body.appendChild(modal);
+      refreshIcons();
+
+      let closed = false;
+      const close = (result) => {
+        if (closed) return;
+        closed = true;
+        document.removeEventListener('keydown', escapeHandler);
+        modal.remove();
+        resolve(result);
+      };
+      const cancel = () => close(false);
+      const accept = () => close(true);
+      const escapeHandler = (event) => { if (event.key === 'Escape') cancel(); };
+      modal.querySelector('[data-confirm-cancel]').onclick = cancel;
+      modal.querySelector('[data-confirm-ok]').onclick = accept;
+      modal.addEventListener('click', (event) => { if (event.target === modal) cancel(); });
+      document.addEventListener('keydown', escapeHandler);
+      modal.querySelector('[data-confirm-cancel]').focus();
+    });
+  }
+
   function fmtViews(n) {
     if (n === null || n === undefined) return '';
     if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M vistas';
@@ -172,7 +211,7 @@ window.WT = (function () {
     }
   }
 
-  const api = { toast, fmtViews, fmtDuration, fmtDate, fmtBytes, guard, renderNav, getWatchStatus, trackPlayback, markViewed, getAutoplay, setAutoplay, refreshIcons };
+  const api = { toast, confirmDialog, fmtViews, fmtDuration, fmtDate, fmtBytes, guard, renderNav, getWatchStatus, trackPlayback, markViewed, getAutoplay, setAutoplay, refreshIcons };
   refreshIcons();
   return api;
 })();
