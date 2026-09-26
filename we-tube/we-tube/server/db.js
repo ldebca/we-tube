@@ -27,8 +27,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS media (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  file_name TEXT NOT NULL,
-  relative_path TEXT NOT NULL,
+  file_name TEXT,
+  relative_path TEXT,
   media_type VARCHAR(16) NOT NULL, -- video | audio | image
   title TEXT,
   channel_name TEXT,
@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS media (
   duration_seconds INTEGER,
   thumbnail_path TEXT,
   source_url TEXT,
+  pending_download BOOLEAN NOT NULL DEFAULT FALSE,
   favorite BOOLEAN NOT NULL DEFAULT FALSE,
   is_incognito BOOLEAN NOT NULL DEFAULT FALSE,
   incognito_session_id TEXT,
@@ -47,6 +48,9 @@ CREATE TABLE IF NOT EXISTS media (
 CREATE INDEX IF NOT EXISTS idx_media_owner ON media(owner_id);
 CREATE INDEX IF NOT EXISTS idx_media_type ON media(media_type);
 CREATE INDEX IF NOT EXISTS idx_media_incognito ON media(incognito_session_id);
+ALTER TABLE media ALTER COLUMN file_name DROP NOT NULL;
+ALTER TABLE media ALTER COLUMN relative_path DROP NOT NULL;
+ALTER TABLE media ADD COLUMN IF NOT EXISTS pending_download BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS download_jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -69,10 +73,12 @@ CREATE TABLE IF NOT EXISTS channels (
   owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
   channel_url TEXT NOT NULL,
   channel_name TEXT,
+  video_cursor INTEGER NOT NULL DEFAULT 1,
   last_checked_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_channels_owner ON channels(owner_id);
+ALTER TABLE channels ADD COLUMN IF NOT EXISTS video_cursor INTEGER NOT NULL DEFAULT 1;
 `;
 
 async function ensureSchema() {

@@ -58,6 +58,7 @@ router.get('/:id/stream', requireAuth, async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM media WHERE id = $1', [req.params.id]);
   const item = rows[0];
   if (!item || !ownsMedia(item, identity)) return res.status(404).end();
+  if (item.pending_download) return res.status(409).json({ error: 'Este video esta pendiente de descarga.' });
 
   const filePath = path.join(cfg.mediaRoot, item.relative_path);
   if (!fs.existsSync(filePath)) return res.status(404).end();
@@ -91,11 +92,17 @@ router.delete('/:id', requireAuth, async (req, res) => {
   const item = rows[0];
   if (!item || !ownsMedia(item, identity)) return res.status(404).json({ error: 'No encontrado.' });
 
-  const filePath = path.join(cfg.mediaRoot, item.relative_path);
+  const filePath = item.relative_path ? path.join(cfg.mediaRoot, item.relative_path) : null;
   try {
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    const infoJson = filePath.replace(path.extname(filePath), '.info.json');
-    if (fs.existsSync(infoJson)) fs.unlinkSync(infoJson);
+    if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (filePath) {
+      const infoJson = filePath.replace(path.extname(filePath), '.info.json');
+      if (fs.existsSync(infoJson)) fs.unlinkSync(infoJson);
+    }
+    if (item.thumbnail_path) {
+      const thumbnailPath = path.join(cfg.mediaRoot, item.thumbnail_path);
+      if (fs.existsSync(thumbnailPath)) fs.unlinkSync(thumbnailPath);
+    }
   } catch (err) {
     console.error('[media] Error borrando archivo del disco:', err.message);
   }

@@ -57,3 +57,9 @@ test('buildArgs: subtitulos agrega flags correctos con idiomas por defecto', () 
   const idx = args.indexOf('--sub-langs');
   assert.equal(args[idx + 1], 'es,en');
 });
+
+test('listChannelVideos: las opciones de paginacion van antes de --print', () => {
+  const source = require('fs').readFileSync(path.join(__dirname, '../server/services/ytdlp.js'), 'utf8');
+  assert.match(source, /const args = \['--flat-playlist'\];[\s\S]*args\.push\('--playlist-start'/);
+  assert.match(source, /args\.push\('--print', '%\(id\)s\|\|\|%\(title\)s/);
+});

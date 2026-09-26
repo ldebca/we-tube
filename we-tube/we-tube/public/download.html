@@ -84,6 +84,7 @@
           <div>
             <label class="text-xs block mb-1" style="color:var(--text-muted)">Ruta a archivo de cookies (para contenido privado)</label>
             <input id="cookiesFile" type="text" placeholder="/ruta/al/cookies.txt"/>
+            <p class="text-xs mt-1" style="color:var(--text-muted)">Para contenido exclusivo necesitas cookies de una cuenta que sea miembro del canal.</p>
           </div>
           <div>
             <label class="text-xs block mb-1" style="color:var(--text-muted)">Argumentos extra de yt-dlp (flags CLI completos)</label>
@@ -118,8 +119,15 @@
         </div>
 
         <form id="channel-form" class="channel-form mt-4 mb-4">
-          <input id="channel-url" type="url" placeholder="https://www.youtube.com/@canal" required/>
-          <button class="btn-ghost shrink-0">Agregar</button>
+          <div class="channel-url-field">
+            <label for="channel-url" class="text-xs block mb-1" style="color:var(--text-muted)">URL del canal</label>
+            <input id="channel-url" type="url" placeholder="https://www.youtube.com/@canal" required/>
+          </div>
+          <div class="channel-count-field">
+            <label for="initial-download-count" class="text-xs block mb-1" style="color:var(--text-muted)">Descargar ahora</label>
+            <input id="initial-download-count" type="number" min="0" max="25" value="5" required/>
+          </div>
+          <button type="submit" class="btn-ghost shrink-0"><i data-lucide="plus" class="ui-icon"></i> Agregar</button>
         </form>
         <div id="channels-list" class="space-y-2"></div>
       </aside>
@@ -179,13 +187,32 @@
         const pct = Number(job.progress || 0);
         const statusLabel = { queued: 'En cola', running: 'Descargando', done: 'Completado', error: 'Error' }[job.status] || job.status;
         return `<div class="card rounded-xl p-4" data-job="${job.id}">
-          <div class="flex justify-between text-sm mb-2">
+          <div class="flex justify-between items-start gap-3 text-sm mb-2">
             <span class="truncate max-w-[70%]" style="color:var(--text-muted)">${job.url}</span>
-            <span class="font-medium">${statusLabel}</span>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="font-medium">${statusLabel}</span>
+              ${job.status === 'done' || job.status === 'error' ? `<button data-job-id="${job.id}" class="wt-remove-job btn-ghost icon-button" aria-label="Quitar descarga"><i data-lucide="x" class="ui-icon"></i></button>` : ''}
+            </div>
           </div>
           <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
           ${job.status === 'error' ? `<p class="text-xs mt-2" style="color:var(--danger)">${job.error || ''}</p>` : ''}
         </div>`;
+      }
+
+      function bindJobActions() {
+        document.querySelectorAll('.wt-remove-job').forEach((btn) => {
+          btn.onclick = async () => {
+            btn.disabled = true;
+            try {
+              await WTApi.deleteJob(btn.dataset.jobId);
+              dismissedJobs.add(btn.dataset.jobId);
+              refreshJobs();
+            } catch (err) {
+              btn.disabled = false;
+              WT.toast(err.message, true);
+            }
+          };
+        });
       }
 
       async function refreshJobs() {
@@ -199,6 +226,8 @@
           document.getElementById('jobs-count').textContent = visibleJobs.length ? `${visibleJobs.length} visibles` : '';
           document.getElementById('jobs-list').innerHTML = visibleJobs.map(jobRow).join('') ||
             '<p class="empty-panel text-sm">No hay descargas recientes.</p>';
+          WT.refreshIcons();
+          bindJobActions();
         } catch (e) { /* silencioso */ }
       }
 
@@ -212,11 +241,8 @@
               clearInterval(interval);
               if (job.status === 'done') {
                 WT.toast('Descarga completada: ' + job.url);
-                setTimeout(() => {
-                  dismissedJobs.add(job.id);
-                  refreshJobs();
-                }, 5000);
               }
+              refreshJobs();
             }
           } catch (e) { clearInterval(interval); }
         }, 2000);
@@ -229,23 +255,57 @@
       async function loadChannels() {
         const channels = await WTApi.listChannels();
         document.getElementById('channels-list').innerHTML = channels.map((c) => `
-          <div class="card rounded-xl p-3 flex justify-between items-center text-sm">
-            <span class="truncate">${c.channel_name || c.channel_url}</span>
-            <button data-id="${c.id}" class="wt-remove-channel btn-ghost">Quitar</button>
+          <div class="card rounded-xl p-3 text-sm">
+            <div class="flex justify-between items-center gap-3">
+              <span class="truncate">${c.channel_name && c.channel_name !== 'NA' ? c.channel_name : c.channel_url}</span>
+              <button data-id="${c.id}" class="wt-remove-channel btn-ghost icon-button" aria-label="Quitar canal"><i data-lucide="x" class="ui-icon"></i></button>
+            </div>
+            <button data-id="${c.id}" class="wt-more-channel btn-ghost w-full mt-2"><i data-lucide="list-plus" class="ui-icon"></i> Mostrar más videos</button>
           </div>`).join('') || `<p class="text-sm" style="color:var(--text-muted)">Sin canales agregados aun.</p>`;
+        WT.refreshIcons();
 
         document.querySelectorAll('.wt-remove-channel').forEach((btn) => {
           btn.onclick = async () => { await WTApi.removeChannel(btn.dataset.id); loadChannels(); };
         });
+        document.querySelectorAll('.wt-more-channel').forEach((btn) => {
+          btn.onclick = async () => {
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-circle" class="ui-icon spin-icon"></i> Buscando...';
+            WT.refreshIcons();
+            try {
+              const result = await WTApi.loadMoreChannel(btn.dataset.id);
+              WT.toast(`${result.pending || 0} videos pendientes añadidos. ${result.excluded || 0} exclusivos omitidos.`);
+              loadChannels();
+            } catch (err) {
+              btn.disabled = false;
+              btn.innerHTML = '<i data-lucide="list-plus" class="ui-icon"></i> Mostrar más videos';
+              WT.refreshIcons();
+              WT.toast(err.message, true);
+            }
+          };
+        });
       }
       document.getElementById('channel-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const submitButton = e.currentTarget.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i data-lucide="loader-circle" class="ui-icon spin-icon"></i> Agregando...';
+        WT.refreshIcons();
         try {
-          await WTApi.addChannel(document.getElementById('channel-url').value);
+          const initialDownloadCount = Number(document.getElementById('initial-download-count').value);
+          const result = await WTApi.addChannel(document.getElementById('channel-url').value, null, initialDownloadCount);
           document.getElementById('channel-url').value = '';
-          WT.toast('Canal agregado. Se revisara automaticamente.');
+          document.getElementById('initial-download-count').value = '5';
+          const initialCheck = result.initialCheck || {};
+          WT.toast(`Canal agregado: ${initialCheck.enqueued || 0} descargas iniciadas, ${initialCheck.pending || 0} pendientes y ${initialCheck.excluded || 0} exclusivos omitidos.`);
           loadChannels();
-        } catch (err) { WT.toast(err.message, true); }
+        } catch (err) {
+          WT.toast(`No se pudo agregar el canal: ${err.message}`, true);
+        } finally {
+          submitButton.disabled = false;
+          submitButton.innerHTML = '<i data-lucide="plus" class="ui-icon"></i> Agregar';
+          WT.refreshIcons();
+        }
       });
       loadChannels();
     })();

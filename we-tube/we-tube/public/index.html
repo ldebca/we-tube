@@ -55,6 +55,7 @@
         <div class="thumb-wrap">
           ${thumb}
           ${item.duration_seconds ? `<span class="duration-badge">${WT.fmtDuration(item.duration_seconds)}</span>` : ''}
+          ${item.pending_download ? '<span class="download-pending-badge"><i data-lucide="clock-3" class="badge-icon"></i> Pendiente</span>' : ''}
           ${(() => { const status = WT.getWatchStatus(item.id, user); return `<span class="watch-status watch-status-${status.key}">${status.label}</span>`; })()}
         </div>
         <div class="mt-2">

@@ -41,10 +41,10 @@ async function syncUserMedia(identity, userDirName) {
   const whereClause = isIncognito ? 'incognito_session_id = $1' : 'owner_id = $1';
   const whereParam = isIncognito ? incognitoSessionId : ownerIdForDb;
   const { rows: existing } = await pool.query(
-    `SELECT id, relative_path FROM media WHERE ${whereClause}`,
+    `SELECT id, relative_path, pending_download FROM media WHERE ${whereClause}`,
     [whereParam]
   );
-  const existingPaths = new Set(existing.map((r) => r.relative_path));
+  const existingPaths = new Set(existing.filter((r) => !r.pending_download).map((r) => r.relative_path));
 
   for (const item of onDisk) {
     const relPath = path.join(userDirName, item.file);
@@ -60,7 +60,7 @@ async function syncUserMedia(identity, userDirName) {
 
   // Elimina registros huerfanos (archivo borrado manualmente del disco)
   const onDiskPaths = new Set(onDisk.map((i) => path.join(userDirName, i.file)));
-  for (const row of existing) {
+  for (const row of existing.filter((r) => !r.pending_download)) {
     if (!onDiskPaths.has(row.relative_path)) {
       await pool.query('DELETE FROM media WHERE id = $1', [row.id]);
     }

@@ -72,33 +72,44 @@ async function processNext() {
           .readdirSync(outDir)
           .find((f) => f.includes(`[${info.id}]`) && /\.(jpg|jpeg|png|webp)$/i.test(f));
         const thumbnailRelPath = thumbFile ? path.join(job.userDirName, thumbFile) : null;
+        const channelName = [info.uploader, info.channel, job.options.channelName]
+          .find((value) => value && value !== 'NA') || null;
 
-        await pool.query(
-          `INSERT INTO media
-            (owner_id, file_name, relative_path, media_type, title, channel_name,
-             view_count, like_count, published_at, duration_seconds, thumbnail_path,
-             source_url, is_incognito, incognito_session_id, file_size_bytes)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
-          [
-            job.ownerIdForDb,
-            fileGuess,
-            path.join(job.userDirName, fileGuess),
-            job.options.mode === 'audio' ? 'audio' : 'video',
-            info.title || fileGuess,
-            info.uploader || info.channel || null,
-            info.view_count || null,
-            info.like_count || null,
-            info.upload_date ? new Date(
-              `${info.upload_date.slice(0, 4)}-${info.upload_date.slice(4, 6)}-${info.upload_date.slice(6, 8)}`
-            ) : null,
-            info.duration ? Math.round(info.duration) : null,
-            thumbnailRelPath,
-            info.webpage_url || job.options.url,
-            job.isIncognito,
-            job.incognitoSessionId || null,
-            stat.size,
-          ]
-        );
+        const mediaValues = [
+          fileGuess,
+          path.join(job.userDirName, fileGuess),
+          job.options.mode === 'audio' ? 'audio' : 'video',
+          info.title || fileGuess,
+          channelName,
+          info.view_count || null,
+          info.like_count || null,
+          info.upload_date ? new Date(
+            `${info.upload_date.slice(0, 4)}-${info.upload_date.slice(4, 6)}-${info.upload_date.slice(6, 8)}`
+          ) : null,
+          info.duration ? Math.round(info.duration) : null,
+          thumbnailRelPath,
+          info.webpage_url || job.options.url,
+          stat.size,
+        ];
+        if (job.options.pendingMediaId) {
+          await pool.query(
+            `UPDATE media SET file_name = $1, relative_path = $2, media_type = $3, title = $4,
+              channel_name = $5, view_count = $6, like_count = $7, published_at = $8,
+              duration_seconds = $9, thumbnail_path = $10, source_url = $11,
+              file_size_bytes = $12, pending_download = FALSE
+             WHERE id = $13 AND owner_id = $14 AND pending_download = TRUE`,
+            [...mediaValues, job.options.pendingMediaId, job.ownerIdForDb]
+          );
+        } else {
+          await pool.query(
+            `INSERT INTO media
+              (owner_id, file_name, relative_path, media_type, title, channel_name,
+               view_count, like_count, published_at, duration_seconds, thumbnail_path,
+               source_url, is_incognito, incognito_session_id, file_size_bytes)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+            [job.ownerIdForDb, ...mediaValues.slice(0, 11), job.isIncognito, job.incognitoSessionId || null, mediaValues[11]]
+          );
+        }
       }
     }
 

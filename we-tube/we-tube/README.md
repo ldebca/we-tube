@@ -29,6 +29,10 @@ modo incógnito que borra todo al cerrar sesión.
    ```
    `we-tube` valida al arrancar si `yt-dlp` esta disponible y lo muestra como
    advertencia en el panel de Descargas si no lo encuentra.
+  Para videos que requieren ejecucion JavaScript, instala Deno y configura
+  opcionalmente `YTDLP_JS_RUNTIME=deno` en `.env`. Para contenido exclusivo
+  para miembros, usa en el formulario un archivo de cookies exportado desde
+  una cuenta que pertenezca al canal.
 
 ## Instalacion
 
@@ -90,7 +94,8 @@ usuario abra la web (ver `server/services/mediaScanner.js`).
 - **Metadata preservada**: al descargar, se usa `--write-info-json` y se
   extraen canal, vistas, likes y fecha de publicacion hacia la base de datos.
 - **Listas de reproduccion** (`--yes-playlist`, selección de items) y
-  **canales monitoreados** (revision periodica automatica de nuevos videos).
+  **canales monitoreados** (descarga configurable de los primeros videos,
+  thumbnails para el resto y revision periodica automatica de nuevos videos).
 - **Subida de archivos** (drag & drop) de video/audio/imagen.
 - **Eliminacion** de archivos desde la web (borra archivo + `.info.json` + registro en DB).
 - **Trabajo en segundo plano**: las descargas/subidas usan una cola async; el

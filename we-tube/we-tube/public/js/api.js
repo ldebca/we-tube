@@ -32,6 +32,7 @@ window.WTApi = (function () {
     ytdlpVersion: () => req('/downloads/version'),
     startDownload: (payload) => req('/downloads', { method: 'POST', body: JSON.stringify(payload) }),
     getJob: (id) => req('/downloads/' + id),
+    deleteJob: (id) => req('/downloads/' + id, { method: 'DELETE' }),
     listJobs: () => req('/downloads'),
 
     upload: (file, onProgress) => {
@@ -54,7 +55,11 @@ window.WTApi = (function () {
     },
 
     listChannels: () => req('/channels'),
-    addChannel: (channelUrl, channelName) => req('/channels', { method: 'POST', body: JSON.stringify({ channelUrl, channelName }) }),
+    addChannel: (channelUrl, channelName, initialDownloadCount) => req('/channels', {
+      method: 'POST',
+      body: JSON.stringify({ channelUrl, channelName, initialDownloadCount }),
+    }),
+    loadMoreChannel: (id) => req('/channels/' + id + '/more', { method: 'POST' }),
     removeChannel: (id) => req('/channels/' + id, { method: 'DELETE' }),
     checkChannelsNow: () => req('/channels/check-now', { method: 'POST' }),
 

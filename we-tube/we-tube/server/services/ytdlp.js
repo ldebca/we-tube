@@ -92,6 +92,7 @@ function buildArgs(options, outputDir) {
   if (concurrency) args.push('--concurrent-fragments', String(concurrency));
   const cookies = options.cookiesFile || cfg.properties.ytdlp.cookiesFile;
   if (cookies) args.push('--cookies', cookies);
+  if (cfg.ytdlpJsRuntime) args.push('--js-runtimes', cfg.ytdlpJsRuntime);
 
   // Progreso parseable en stdout (usado por runDownload para reportar %)
   args.push('--newline', '--progress-template', 'download:PROGRESS %(progress._percent_str)s');
@@ -140,16 +141,34 @@ function runDownload(options, outputDir, onProgress, onLog) {
       if (code === 0) {
         resolve({ code, stdout: stdoutBuf });
       } else {
-        reject(new Error(`yt-dlp finalizo con codigo ${code}. ${stderrBuf.slice(-800)}`));
+        const details = stderrBuf.slice(-1200);
+        if (/Join this channel|members-only content/i.test(details)) {
+          reject(new Error(
+            'Este video es exclusivo para miembros del canal. Usa un archivo de cookies de una cuenta que sea miembro y vuelve a intentarlo. '
+              + details
+          ));
+        } else if (/No supported JavaScript runtime/i.test(details)) {
+          reject(new Error(
+            'yt-dlp necesita un runtime JavaScript para este video. Instala Deno o configura YTDLP_JS_RUNTIME en .env. '
+              + details
+          ));
+        } else {
+          reject(new Error(`yt-dlp finalizo con codigo ${code}. ${details}`));
+        }
       }
     });
   });
 }
 
 /** Lista videos de un canal/playlist en modo "flat" (sin descargar), para deteccion de novedades */
-function listChannelVideos(channelUrl) {
+function listChannelVideos(channelUrl, limit, start = 1) {
   return new Promise((resolve, reject) => {
-    const args = ['--flat-playlist', '--playlist-end', '5', '--print', '%(id)s|||%(title)s|||%(webpage_url)s', channelUrl];
+    const args = ['--flat-playlist'];
+    if (Number.isFinite(limit)) {
+      args.push('--playlist-start', String(start), '--playlist-end', String(start + limit - 1));
+    }
+    args.push('--print', '%(id)s|||%(title)s|||%(webpage_url)s|||%(thumbnail)s|||%(uploader)s|||%(availability)s');
+    args.push(channelUrl);
     const proc = spawn(BIN, args);
     let out = '';
     let err = '';
@@ -163,8 +182,15 @@ function listChannelVideos(channelUrl) {
         .split('\n')
         .filter(Boolean)
         .map((line) => {
-          const [id, title, url] = line.split('|||');
-          return { id, title, url };
+          const [id, title, url, thumbnail, channelName, availability] = line.split('|||');
+          return {
+            id,
+            title: title === 'NA' ? null : title,
+            url,
+            thumbnail: thumbnail === 'NA' ? null : thumbnail,
+            channelName: channelName === 'NA' ? null : channelName,
+            availability: availability === 'NA' ? null : availability,
+          };
         });
       resolve(items);
     });

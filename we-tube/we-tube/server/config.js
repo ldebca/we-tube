@@ -33,6 +33,7 @@ if (!fs.existsSync(mediaRoot)) {
 module.exports = {
   properties,
   ytdlpPath: process.env.YTDLP_PATH || properties.ytdlp.binaryPath || 'yt-dlp',
+  ytdlpJsRuntime: process.env.YTDLP_JS_RUNTIME || '',
   reload() {
     const fresh = loadProperties();
     Object.keys(fresh).forEach((k) => {

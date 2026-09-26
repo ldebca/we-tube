@@ -106,7 +106,59 @@
 
         const wrap = document.getElementById('player-wrap');
         const src = `/api/media/${item.id}/stream`;
-        if (item.media_type === 'video') {
+        if (item.pending_download) {
+          wrap.innerHTML = `<div class="pending-player">
+            ${item.thumbnail_path ? `<img src="/media-files/${item.thumbnail_path}" alt=""/>` : '<i data-lucide="clapperboard" class="media-placeholder-icon"></i>'}
+            <div class="pending-player-overlay">
+              <i data-lucide="download" class="pending-player-icon"></i>
+              <p class="font-medium">Video pendiente de descarga</p>
+              <p class="text-sm" style="color:var(--text-muted)">Inicia la descarga para comenzar a reproducirlo.</p>
+              <button id="download-pending" class="btn-primary"><i data-lucide="download" class="ui-icon"></i> Descargar y reproducir</button>
+            </div>
+          </div>`;
+          WT.refreshIcons();
+          document.getElementById('download-pending').onclick = async (event) => {
+            const button = event.currentTarget;
+            button.disabled = true;
+            button.innerHTML = '<i data-lucide="loader-circle" class="ui-icon spin-icon"></i> Encolando...';
+            WT.refreshIcons();
+            try {
+              const job = await WTApi.startDownload({
+                url: item.source_url,
+                mode: 'video',
+                quality: 'best',
+                isPlaylist: false,
+                pendingMediaId: item.id,
+              });
+              button.innerHTML = '<i data-lucide="loader-circle" class="ui-icon spin-icon"></i> Descargando...';
+              WT.refreshIcons();
+              const poll = setInterval(async () => {
+                try {
+                  const status = await WTApi.getJob(job.jobId);
+                  if (status.status === 'done') {
+                    clearInterval(poll);
+                    window.location.reload();
+                  } else if (status.status === 'error') {
+                    clearInterval(poll);
+                    button.disabled = false;
+                    button.innerHTML = '<i data-lucide="rotate-ccw" class="ui-icon"></i> Reintentar descarga';
+                    WT.refreshIcons();
+                    WT.toast(status.error || 'La descarga fallo', true);
+                  }
+                } catch (err) {
+                  clearInterval(poll);
+                  button.disabled = false;
+                  WT.toast(err.message, true);
+                }
+              }, 2000);
+            } catch (err) {
+              button.disabled = false;
+              button.innerHTML = '<i data-lucide="download" class="ui-icon"></i> Descargar y reproducir';
+              WT.refreshIcons();
+              WT.toast(err.message, true);
+            }
+          };
+        } else if (item.media_type === 'video') {
           wrap.innerHTML = `<video src="${src}" controls autoplay class="w-full" style="height:100%;max-height:100%;object-fit:contain"></video>`;
           const player = wrap.querySelector('video');
           WT.trackPlayback(item.id, user, player);
