@@ -15,8 +15,7 @@
 
   <div class="px-4 md:px-6 py-4">
     <div class="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
-      <button data-type="" class="wt-filter btn-ghost !border-0" style="background:var(--accent-soft);color:var(--accent)">Todo</button>
-      <button data-type="video" class="wt-filter btn-ghost !border-0"><i data-lucide="clapperboard" class="ui-icon"></i> Videos</button>
+      <button data-type="video" class="wt-filter btn-ghost !border-0" style="background:var(--accent-soft);color:var(--accent)"><i data-lucide="clapperboard" class="ui-icon"></i> Videos</button>
       <button data-type="audio" class="wt-filter btn-ghost !border-0"><i data-lucide="music-2" class="ui-icon"></i> Audio</button>
       <button data-type="image" class="wt-filter btn-ghost !border-0"><i data-lucide="image" class="ui-icon"></i> Imagenes</button>
     </div>
@@ -36,7 +35,7 @@
   <script src="/js/api.js"></script>
   <script src="/js/app.js"></script>
   <script>
-    let currentType = '';
+    let currentType = 'video';
     let user = null;
     const NO_CHANNEL = 'Global (sin canal)';
 
