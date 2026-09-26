@@ -58,6 +58,8 @@ async function processNext() {
     // Tras completar, leer metadata del .info.json mas reciente y registrar en `media`
     const info = ytdlp.findLatestInfoJson(outDir);
     if (info) {
+      const persistedChannelId = job.channelId &&
+        (await pool.query('SELECT id FROM channels WHERE id = $1', [job.channelId])).rows[0]?.id || null;
       const ext = job.options.mode === 'audio' ? (job.options.audioFormat || 'mp3') : 'mp4';
       const fileGuess = fs
         .readdirSync(outDir)
@@ -96,18 +98,18 @@ async function processNext() {
             `UPDATE media SET file_name = $1, relative_path = $2, media_type = $3, title = $4,
               channel_name = $5, view_count = $6, like_count = $7, published_at = $8,
               duration_seconds = $9, thumbnail_path = $10, source_url = $11,
-              file_size_bytes = $12, pending_download = FALSE
-             WHERE id = $13 AND owner_id = $14 AND pending_download = TRUE`,
-            [...mediaValues, job.options.pendingMediaId, job.ownerIdForDb]
+              file_size_bytes = $12, channel_id = $13, pending_download = FALSE
+             WHERE id = $14 AND owner_id = $15 AND pending_download = TRUE`,
+            [...mediaValues, persistedChannelId, job.options.pendingMediaId, job.ownerIdForDb]
           );
         } else {
           await pool.query(
             `INSERT INTO media
-              (owner_id, file_name, relative_path, media_type, title, channel_name,
+              (owner_id, channel_id, file_name, relative_path, media_type, title, channel_name,
                view_count, like_count, published_at, duration_seconds, thumbnail_path,
                source_url, is_incognito, incognito_session_id, file_size_bytes)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
-            [job.ownerIdForDb, ...mediaValues.slice(0, 11), job.isIncognito, job.incognitoSessionId || null, mediaValues[11]]
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+            [job.ownerIdForDb, persistedChannelId, ...mediaValues.slice(0, 11), job.isIncognito, job.incognitoSessionId || null, mediaValues[11]]
           );
         }
       }
@@ -128,16 +130,27 @@ async function processNext() {
  * ownerIdForDb: UUID real del usuario, o null si es incognito (no se persiste owner)
  * userDirName: carpeta destino dentro de media/ (ej: username o _incognito/<sessionId>)
  */
-async function enqueueDownload({ ownerIdForDb, userDirName, url, options, isIncognito, incognitoSessionId }) {
+async function enqueueDownload({ ownerIdForDb, channelId, userDirName, url, options, isIncognito, incognitoSessionId }) {
   const { rows } = await pool.query(
-    `INSERT INTO download_jobs (owner_id, url, status, options_json, is_incognito, incognito_session_id)
-     VALUES ($1,$2,'queued',$3,$4,$5) RETURNING id`,
-    [ownerIdForDb, url, JSON.stringify(options), !!isIncognito, incognitoSessionId || null]
+    `INSERT INTO download_jobs (owner_id, channel_id, url, status, options_json, is_incognito, incognito_session_id)
+     VALUES ($1,$2,$3,'queued',$4,$5,$6) RETURNING id`,
+    [ownerIdForDb, channelId || null, url, JSON.stringify(options), !!isIncognito, incognitoSessionId || null]
   );
   const id = rows[0].id;
-  queue.push({ id, ownerIdForDb, userDirName, options: { ...options, url }, isIncognito, incognitoSessionId });
+  queue.push({ id, ownerIdForDb, channelId: channelId || null, userDirName, options: { ...options, url }, isIncognito, incognitoSessionId });
   processNext();
   return id;
 }
 
-module.exports = { enqueueDownload, userMediaDir };
+function cancelQueuedChannel(channelId) {
+  let cancelled = 0;
+  for (let index = queue.length - 1; index >= 0; index -= 1) {
+    if (queue[index].channelId === channelId) {
+      queue.splice(index, 1);
+      cancelled += 1;
+    }
+  }
+  return cancelled;
+}
+
+module.exports = { enqueueDownload, cancelQueuedChannel, userMediaDir };

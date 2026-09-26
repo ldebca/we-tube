@@ -265,7 +265,26 @@
         WT.refreshIcons();
 
         document.querySelectorAll('.wt-remove-channel').forEach((btn) => {
-          btn.onclick = async () => { await WTApi.removeChannel(btn.dataset.id); loadChannels(); };
+          btn.onclick = async () => {
+            const confirmed = await WT.confirmDialog(
+              'Se eliminarán el canal, sus videos descargados, pendientes y descargas en cola.',
+              { title: 'Eliminar canal', confirmLabel: 'Eliminar canal' }
+            );
+            if (!confirmed) return;
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-circle" class="ui-icon spin-icon"></i>';
+            WT.refreshIcons();
+            try {
+              const result = await WTApi.removeChannel(btn.dataset.id);
+              WT.toast(`Canal eliminado: ${result.mediaDeleted || 0} archivos quitados.`);
+              loadChannels();
+            } catch (err) {
+              btn.disabled = false;
+              btn.innerHTML = '<i data-lucide="x" class="ui-icon"></i>';
+              WT.refreshIcons();
+              WT.toast(err.message, true);
+            }
+          };
         });
         document.querySelectorAll('.wt-more-channel').forEach((btn) => {
           btn.onclick = async () => {

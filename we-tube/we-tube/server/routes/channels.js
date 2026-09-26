@@ -43,8 +43,10 @@ router.post('/', requireAuth, async (req, res) => {
 
 router.delete('/:id', requireAuth, async (req, res) => {
   const identity = resolveUserStorage(req.user);
-  await pool.query('DELETE FROM channels WHERE id = $1 AND owner_id = $2', [req.params.id, identity.ownerIdForDb]);
-  res.json({ ok: true });
+  if (identity.isIncognito) return res.status(400).json({ error: 'No disponible en modo incognito.' });
+  const result = await channelsService.removeChannel(req.params.id, identity.ownerIdForDb);
+  if (!result) return res.status(404).json({ error: 'Canal no encontrado.' });
+  res.json({ ok: true, ...result });
 });
 
 router.post('/:id/more', requireAuth, async (req, res) => {

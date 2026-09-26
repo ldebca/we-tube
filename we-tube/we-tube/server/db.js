@@ -79,6 +79,10 @@ CREATE TABLE IF NOT EXISTS channels (
 );
 CREATE INDEX IF NOT EXISTS idx_channels_owner ON channels(owner_id);
 ALTER TABLE channels ADD COLUMN IF NOT EXISTS video_cursor INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE media ADD COLUMN IF NOT EXISTS channel_id UUID REFERENCES channels(id) ON DELETE SET NULL;
+ALTER TABLE download_jobs ADD COLUMN IF NOT EXISTS channel_id UUID REFERENCES channels(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_media_channel ON media(channel_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_channel ON download_jobs(channel_id);
 `;
 
 async function ensureSchema() {

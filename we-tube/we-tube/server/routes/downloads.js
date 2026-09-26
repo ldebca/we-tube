@@ -26,12 +26,14 @@ router.post('/', requireAuth, async (req, res) => {
   }
 
   const identity = resolveUserStorage(req.user);
+  let channelId = null;
   if (pendingMediaId) {
     const { rows } = await pool.query(
-      'SELECT id FROM media WHERE id = $1 AND owner_id = $2 AND pending_download = TRUE',
+      'SELECT id, channel_id FROM media WHERE id = $1 AND owner_id = $2 AND pending_download = TRUE',
       [pendingMediaId, identity.ownerIdForDb]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Video pendiente no encontrado.' });
+    channelId = rows[0].channel_id;
   }
   const options = {
     mode: mode === 'audio' ? 'audio' : 'video',
@@ -51,6 +53,7 @@ router.post('/', requireAuth, async (req, res) => {
 
   const jobId = await jobs.enqueueDownload({
     ownerIdForDb: identity.ownerIdForDb,
+    channelId,
     userDirName: identity.dirName,
     url,
     options,

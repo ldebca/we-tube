@@ -10,6 +10,40 @@ const cfg = require('../config');
 const ytdlp = require('./ytdlp');
 const jobs = require('./jobs');
 
+async function removeChannel(channelId, ownerId) {
+  const { rows } = await pool.query(
+    `SELECT c.*, u.username AS owner_username
+     FROM channels c JOIN users u ON u.id = c.owner_id
+     WHERE c.id = $1 AND c.owner_id = $2`,
+    [channelId, ownerId]
+  );
+  const channel = rows[0];
+  if (!channel) return null;
+
+  const canonicalName = fallbackChannelName(channel);
+  const mediaResult = await pool.query(
+    `SELECT id, relative_path, thumbnail_path FROM media
+     WHERE owner_id = $1 AND (channel_id = $2 OR channel_name = $3)`,
+    [ownerId, channelId, canonicalName]
+  );
+  for (const media of mediaResult.rows) {
+    const paths = [media.relative_path, media.thumbnail_path].filter(Boolean);
+    for (const relativePath of paths) {
+      const fullPath = path.join(cfg.mediaRoot, relativePath);
+      if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+    }
+  }
+
+  jobs.cancelQueuedChannel(channelId);
+  await pool.query('DELETE FROM download_jobs WHERE owner_id = $1 AND channel_id = $2 AND status = $3', [ownerId, channelId, 'queued']);
+  await pool.query(
+    'DELETE FROM media WHERE owner_id = $1 AND (channel_id = $2 OR channel_name = $3)',
+    [ownerId, channelId, canonicalName]
+  );
+  await pool.query('DELETE FROM channels WHERE id = $1 AND owner_id = $2', [channelId, ownerId]);
+  return { mediaDeleted: mediaResult.rowCount };
+}
+
 async function checkAllChannels() {
   const { rows: channels } = await pool.query(
     `SELECT c.*, u.username AS owner_username
@@ -75,9 +109,9 @@ async function createPendingMedia(ch, video) {
   const thumbnailPath = await downloadThumbnail(ch, video);
   await pool.query(
     `INSERT INTO media
-      (owner_id, media_type, title, channel_name, thumbnail_path, source_url, pending_download, is_incognito)
-     VALUES ($1,'video',$2,$3,$4,$5,TRUE,FALSE)`,
-    [ch.owner_id, video.title || video.id, video.channelName || fallbackChannelName(ch), thumbnailPath, video.url]
+      (owner_id, channel_id, media_type, title, channel_name, thumbnail_path, source_url, pending_download, is_incognito)
+     VALUES ($1,$2,'video',$3,$4,$5,$6,TRUE,FALSE)`,
+    [ch.owner_id, ch.id, video.title || video.id, video.channelName || fallbackChannelName(ch), thumbnailPath, video.url]
   );
 }
 
@@ -105,8 +139,8 @@ async function checkChannelRow(ch, downloadCount = Infinity, createPending = fal
     const canonicalName = fallbackChannelName(ch);
     for (const video of recent) {
       await pool.query(
-        'UPDATE media SET channel_name = $1 WHERE owner_id = $2 AND source_url = $3',
-        [canonicalName, ch.owner_id, video.url]
+        'UPDATE media SET channel_id = $1, channel_name = $2 WHERE owner_id = $3 AND source_url = $4',
+        [ch.id, canonicalName, ch.owner_id, video.url]
       );
     }
 
@@ -117,7 +151,7 @@ async function checkChannelRow(ch, downloadCount = Infinity, createPending = fal
             ownerIdForDb: ch.owner_id,
             userDirName: ch.owner_username,
             url: v.url,
-            options: { mode: 'video', quality: 'best', isPlaylist: false, channelName: canonicalName },
+            options: { mode: 'video', quality: 'best', isPlaylist: false, channelName: canonicalName, channelId: ch.id },
             isIncognito: false,
           });
           enqueued += 1;
@@ -142,4 +176,4 @@ async function checkChannelRow(ch, downloadCount = Infinity, createPending = fal
   }
 }
 
-module.exports = { checkAllChannels, checkChannel, loadMoreChannel };
+module.exports = { checkAllChannels, checkChannel, loadMoreChannel, removeChannel };
