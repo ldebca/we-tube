@@ -75,6 +75,7 @@
       });
 
       return [...groups.entries()].map(([channel, channelItems]) => {
+        const channelId = channelItems.find((item) => item.channel_id)?.channel_id;
         const label = channel.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
         return `
         <section class="channel-section">
@@ -86,8 +87,29 @@
             <span class="text-xs shrink-0" style="color:var(--text-muted)">${channelItems.length} ${channelItems.length === 1 ? 'elemento' : 'elementos'}</span>
           </div>
           <div class="channel-grid">${channelItems.map(card).join('')}</div>
+          ${channelId ? `<div class="channel-section-footer"><button data-channel-id="${channelId}" class="wt-load-more-channel btn-ghost"><i data-lucide="list-plus" class="ui-icon"></i> Cargar más</button></div>` : ''}
         </section>`;
       }).join('');
+    }
+
+    function bindLoadMoreChannels(q) {
+      document.querySelectorAll('.wt-load-more-channel').forEach((button) => {
+        button.onclick = async () => {
+          button.disabled = true;
+          button.innerHTML = '<i data-lucide="loader-circle" class="ui-icon spin-icon"></i> Cargando...';
+          WT.refreshIcons();
+          try {
+            const result = await WTApi.loadMoreChannel(button.dataset.channelId);
+            WT.toast(`${result.pending || 0} videos pendientes añadidos.`);
+            load(q);
+          } catch (err) {
+            button.disabled = false;
+            button.innerHTML = '<i data-lucide="list-plus" class="ui-icon"></i> Cargar más';
+            WT.refreshIcons();
+            WT.toast(err.message, true);
+          }
+        };
+      });
     }
 
     async function load(q) {
@@ -98,6 +120,7 @@
         const items = await WTApi.listMedia(q, currentType);
         sections.innerHTML = renderSections(items);
         WT.refreshIcons();
+        bindLoadMoreChannels(q);
         empty.classList.toggle('hidden', items.length > 0);
         sections.classList.toggle('hidden', items.length === 0);
       } catch (err) {

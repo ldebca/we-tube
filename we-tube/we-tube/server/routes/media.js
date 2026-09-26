@@ -33,7 +33,7 @@ router.get('/', requireAuth, async (req, res) => {
     params.push(type);
     sql += ` AND media_type = $${params.length}`;
   }
-  sql += ' ORDER BY created_at DESC';
+  sql += ' ORDER BY pending_download ASC, created_at DESC';
 
   const { rows } = await pool.query(sql, params);
   res.json(rows);

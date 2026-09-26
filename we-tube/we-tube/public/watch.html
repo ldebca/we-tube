@@ -114,6 +114,10 @@
               <p class="font-medium">Video pendiente de descarga</p>
               <p class="text-sm" style="color:var(--text-muted)">Inicia la descarga para comenzar a reproducirlo.</p>
               <button id="download-pending" class="btn-primary"><i data-lucide="download" class="ui-icon"></i> Descargar y reproducir</button>
+              <div id="pending-progress-wrap" class="pending-progress-wrap hidden">
+                <div class="pending-progress-track"><div id="pending-progress-fill" class="pending-progress-fill"></div></div>
+                <p id="pending-progress-label" class="text-xs">En cola: 0%</p>
+              </div>
             </div>
           </div>`;
           WT.refreshIcons();
@@ -132,9 +136,14 @@
               });
               button.innerHTML = '<i data-lucide="loader-circle" class="ui-icon spin-icon"></i> Descargando...';
               WT.refreshIcons();
+              document.getElementById('pending-progress-wrap').classList.remove('hidden');
               const poll = setInterval(async () => {
                 try {
                   const status = await WTApi.getJob(job.jobId);
+                  const progress = Math.max(0, Math.min(100, Number(status.progress || 0)));
+                  document.getElementById('pending-progress-fill').style.width = `${progress}%`;
+                  document.getElementById('pending-progress-label').textContent =
+                    `${status.status === 'queued' ? 'En cola' : 'Descargando'}: ${progress.toFixed(0)}%`;
                   if (status.status === 'done') {
                     clearInterval(poll);
                     window.location.reload();

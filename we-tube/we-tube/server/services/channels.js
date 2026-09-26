@@ -65,7 +65,7 @@ async function checkChannel(channelId, initialDownloadCount = 5) {
      WHERE c.id = $1`,
     [channelId]
   );
-  if (rows[0]) return checkChannelRow(rows[0], initialDownloadCount, true, 25, 1);
+  if (rows[0]) return checkChannelRow(rows[0], initialDownloadCount, true, 30, 1);
   return { enqueued: 0 };
 }
 

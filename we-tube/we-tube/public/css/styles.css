@@ -71,6 +71,10 @@ h1, h2, h3, .display {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   margin-bottom: 1rem;
 }
+.channel-section-footer { display: flex; justify-content: center; margin-top: 1.25rem; }
+.pending-progress-wrap { width: min(100%, 420px); margin-top: 0.5rem; }
+.pending-progress-track { height: 8px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,0.2); }
+.pending-progress-fill { height: 100%; width: 0; border-radius: inherit; background: var(--teal); transition: width 0.25s ease; }
 .channel-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
   gap: 1.5rem 1rem;
