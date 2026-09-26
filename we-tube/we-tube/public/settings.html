@@ -12,40 +12,69 @@
 </head>
 <body>
   <div id="wt-nav"></div>
-  <div class="max-w-2xl mx-auto px-4 py-8">
+  <div class="settings-page">
     <h1 class="text-xl font-semibold mb-1">Configuracion</h1>
-    <p class="text-sm mb-5" style="color:var(--text-muted)">Estos valores viven en <code>config/properties.json</code> en el servidor.</p>
+    <p class="text-sm mb-5" style="color:var(--text-muted)">Administra el comportamiento de la aplicación. Los cambios que afectan al arranque requieren reiniciar el servidor.</p>
 
-    <div id="admin-only" class="hidden">
-      <form id="cfg-form" class="card rounded-2xl p-5 space-y-4">
-        <div>
-          <label class="text-sm font-medium block mb-1">Directorio local de medios</label>
-          <input id="rootDir" type="text"/>
-          <p class="text-xs mt-1" style="color:var(--text-muted)">Ruta absoluta o relativa al servidor. Requiere reiniciar la app tras cambiarla.</p>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex items-center gap-2 mt-2">
-            <input id="cleanupEnabled" type="checkbox" class="w-auto"/>
-            <label for="cleanupEnabled" class="text-sm">Limpieza automatica activa</label>
+    <div id="settings-form-wrap">
+      <form id="cfg-form" class="settings-form">
+        <section class="settings-section">
+          <div class="settings-section-heading"><i data-lucide="server" class="section-icon"></i><div><h2>Servidor</h2><p>Dirección pública y puerto HTTP.</p></div></div>
+          <div class="settings-grid">
+            <div><label for="serverPort">Puerto</label><input id="serverPort" type="number" min="1" max="65535"/></div>
+            <div><label for="publicUrl">URL pública</label><input id="publicUrl" type="url"/></div>
           </div>
-          <div>
-            <label class="text-sm font-medium block mb-1">Borrar archivos con mas de (dias)</label>
-            <input id="maxAgeDays" type="number" min="1"/>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-section-heading"><i data-lucide="hard-drive" class="section-icon"></i><div><h2>Medios</h2><p>Almacenamiento y formatos aceptados.</p></div></div>
+          <div class="settings-grid">
+            <div class="settings-field-wide"><label for="rootDir">Directorio local</label><input id="rootDir" type="text"/><p>Ruta absoluta o relativa al proyecto.</p></div>
+            <div><label for="maxUploadSizeMB">Tamaño máximo de subida (MB)</label><input id="maxUploadSizeMB" type="number" min="1"/></div>
+            <div><label for="allowedVideoExt">Extensiones de video</label><input id="allowedVideoExt" type="text" placeholder=".mp4, .webm"/><p>Separadas por comas.</p></div>
+            <div><label for="allowedAudioExt">Extensiones de audio</label><input id="allowedAudioExt" type="text" placeholder=".mp3, .m4a"/><p>Separadas por comas.</p></div>
+            <div><label for="allowedImageExt">Extensiones de imagen</label><input id="allowedImageExt" type="text" placeholder=".jpg, .png"/><p>Separadas por comas.</p></div>
           </div>
-        </div>
-        <div>
-          <label class="text-sm font-medium block mb-1">Ruta al binario de yt-dlp</label>
-          <input id="ytdlpBin" type="text"/>
-        </div>
-        <button type="submit" class="btn-primary w-full">Guardar cambios</button>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-section-heading"><i data-lucide="broom" class="section-icon"></i><div><h2>Limpieza automática</h2><p>Controla cuándo se eliminan archivos antiguos.</p></div></div>
+          <div class="settings-grid">
+            <label class="settings-toggle"><input id="cleanupEnabled" type="checkbox"/><span>Limpieza activa</span></label>
+            <div><label for="maxAgeDays">Antigüedad máxima (días)</label><input id="maxAgeDays" type="number" min="1"/></div>
+            <div><label for="cleanupCron">Programación cron</label><input id="cleanupCron" type="text" placeholder="0 3 * * *"/></div>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-section-heading"><i data-lucide="download" class="section-icon"></i><div><h2>yt-dlp</h2><p>Binario y parámetros predeterminados de descarga.</p></div></div>
+          <div class="settings-grid">
+            <div><label for="ytdlpBin">Ruta del binario</label><input id="ytdlpBin" type="text"/><p>YTDLP_PATH en .env tiene prioridad.</p></div>
+            <div><label for="concurrentFragments">Fragmentos simultáneos</label><input id="concurrentFragments" type="number" min="1"/></div>
+            <div class="settings-field-wide"><label for="defaultFormat">Formato de video</label><input id="defaultFormat" type="text"/></div>
+            <div><label for="cookiesFile">Archivo de cookies</label><input id="cookiesFile" type="text" placeholder="Opcional"/></div>
+            <div><label for="rateLimit">Límite de velocidad</label><input id="rateLimit" type="text" placeholder="Sin límite"/></div>
+            <label class="settings-toggle"><input id="writeInfoJson" type="checkbox"/><span>Guardar metadata JSON</span></label>
+            <label class="settings-toggle"><input id="writeThumbnail" type="checkbox"/><span>Descargar thumbnails</span></label>
+            <label class="settings-toggle"><input id="embedMetadata" type="checkbox"/><span>Insertar metadata</span></label>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-section-heading"><i data-lucide="radio-tower" class="section-icon"></i><div><h2>Canales</h2><p>Frecuencia de revisión automática.</p></div></div>
+          <div><label for="channelsCron">Programación cron</label><input id="channelsCron" type="text" placeholder="0 */6 * * *"/></div>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-section-heading"><i data-lucide="users" class="section-icon"></i><div><h2>Registro</h2><p>Controla si se permiten nuevas cuentas.</p></div></div>
+          <label class="settings-toggle"><input id="allowRegistration" type="checkbox"/><span>Permitir registro de usuarios</span></label>
+        </section>
+
+        <div class="settings-actions"><span id="cfg-status" class="text-sm" style="color:var(--text-muted)"></span><button type="submit" class="btn-primary"><i data-lucide="save" class="ui-icon"></i> Guardar cambios</button></div>
       </form>
     </div>
 
-    <div id="not-admin" class="hidden card rounded-xl p-5 text-sm" style="color:var(--text-muted)">
-      Solo un usuario administrador puede editar la configuracion del servidor. Puedes ver los valores actuales a continuacion.
-    </div>
-
-    <pre id="cfg-view" class="card rounded-xl p-4 mt-4 text-xs overflow-auto"></pre>
+    <div id="cfg-summary" class="settings-summary hidden"></div>
   </div>
 
   <script src="/js/api.js"></script>
@@ -57,30 +86,51 @@
       WT.renderNav('settings', user);
 
       const cfg = await WTApi.getConfig();
-      document.getElementById('cfg-view').textContent = JSON.stringify(cfg, null, 2);
-
-      if (user.isAdmin) {
-        document.getElementById('admin-only').classList.remove('hidden');
+      {
+        document.getElementById('settings-form-wrap').classList.remove('hidden');
+        document.getElementById('cfg-summary').classList.add('hidden');
+        const csv = (value) => (value || []).join(', ');
+        document.getElementById('serverPort').value = cfg.server.port;
+        document.getElementById('publicUrl').value = cfg.server.publicUrl;
         document.getElementById('rootDir').value = cfg.media.rootDir;
+        document.getElementById('maxUploadSizeMB').value = cfg.media.maxUploadSizeMB;
+        document.getElementById('allowedVideoExt').value = csv(cfg.media.allowedVideoExt);
+        document.getElementById('allowedAudioExt').value = csv(cfg.media.allowedAudioExt);
+        document.getElementById('allowedImageExt').value = csv(cfg.media.allowedImageExt);
         document.getElementById('cleanupEnabled').checked = cfg.cleanup.enabled;
         document.getElementById('maxAgeDays').value = cfg.cleanup.maxAgeDays;
+        document.getElementById('cleanupCron').value = cfg.cleanup.cronSchedule;
         document.getElementById('ytdlpBin').value = cfg.ytdlp.binaryPath;
+        document.getElementById('defaultFormat').value = cfg.ytdlp.defaultFormat;
+        document.getElementById('cookiesFile').value = cfg.ytdlp.cookiesFile;
+        document.getElementById('rateLimit').value = cfg.ytdlp.rateLimit;
+        document.getElementById('concurrentFragments').value = cfg.ytdlp.concurrentFragments;
+        document.getElementById('writeInfoJson').checked = cfg.ytdlp.writeInfoJson;
+        document.getElementById('writeThumbnail').checked = cfg.ytdlp.writeThumbnail;
+        document.getElementById('embedMetadata').checked = cfg.ytdlp.embedMetadata;
+        document.getElementById('channelsCron').value = cfg.channels.checkIntervalCron;
+        document.getElementById('allowRegistration').checked = cfg.auth.allowRegistration;
 
         document.getElementById('cfg-form').addEventListener('submit', async (e) => {
           e.preventDefault();
+          const list = (id) => document.getElementById(id).value.split(',').map((item) => item.trim()).filter(Boolean);
+          const status = document.getElementById('cfg-status');
+          status.textContent = 'Guardando...';
           try {
             const updated = {
               ...cfg,
-              media: { ...cfg.media, rootDir: document.getElementById('rootDir').value },
-              cleanup: { ...cfg.cleanup, enabled: document.getElementById('cleanupEnabled').checked, maxAgeDays: Number(document.getElementById('maxAgeDays').value) },
-              ytdlp: { ...cfg.ytdlp, binaryPath: document.getElementById('ytdlpBin').value },
+              server: { ...cfg.server, port: Number(document.getElementById('serverPort').value), publicUrl: document.getElementById('publicUrl').value },
+              media: { ...cfg.media, rootDir: document.getElementById('rootDir').value, maxUploadSizeMB: Number(document.getElementById('maxUploadSizeMB').value), allowedVideoExt: list('allowedVideoExt'), allowedAudioExt: list('allowedAudioExt'), allowedImageExt: list('allowedImageExt') },
+              cleanup: { ...cfg.cleanup, enabled: document.getElementById('cleanupEnabled').checked, maxAgeDays: Number(document.getElementById('maxAgeDays').value), cronSchedule: document.getElementById('cleanupCron').value },
+              ytdlp: { ...cfg.ytdlp, binaryPath: document.getElementById('ytdlpBin').value, defaultFormat: document.getElementById('defaultFormat').value, cookiesFile: document.getElementById('cookiesFile').value, rateLimit: document.getElementById('rateLimit').value, concurrentFragments: Number(document.getElementById('concurrentFragments').value), writeInfoJson: document.getElementById('writeInfoJson').checked, writeThumbnail: document.getElementById('writeThumbnail').checked, embedMetadata: document.getElementById('embedMetadata').checked },
+              channels: { ...cfg.channels, checkIntervalCron: document.getElementById('channelsCron').value },
+              auth: { ...cfg.auth, allowRegistration: document.getElementById('allowRegistration').checked },
             };
             await WTApi.saveConfig(updated);
-            WT.toast('Configuracion guardada. Reinicia el servidor si cambiaste el directorio.');
-          } catch (err) { WT.toast(err.message, true); }
+            status.textContent = 'Configuración guardada';
+            WT.toast('Configuración guardada. Reinicia el servidor si cambiaste puerto, rutas o programación.');
+          } catch (err) { status.textContent = 'No se pudo guardar'; WT.toast(err.message, true); }
         });
-      } else {
-        document.getElementById('not-admin').classList.remove('hidden');
       }
     })();
   </script>

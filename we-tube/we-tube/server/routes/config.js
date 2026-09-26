@@ -16,11 +16,12 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 router.put('/', requireAuth, (req, res) => {
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ error: 'Solo un administrador puede modificar la configuracion.' });
-  }
   const incoming = req.body || {};
-  const merged = { ...cfg.properties, ...incoming, auth: cfg.properties.auth };
+  const merged = {
+    ...cfg.properties,
+    ...incoming,
+    auth: { ...cfg.properties.auth, allowRegistration: Boolean(incoming.auth?.allowRegistration) },
+  };
   cfg.saveProperties(merged);
   cfg.reload();
   res.json({ ok: true, properties: cfg.properties });
