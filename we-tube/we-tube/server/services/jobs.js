@@ -72,7 +72,7 @@ async function processNext() {
           .readdirSync(outDir)
           .find((f) => f.includes(`[${info.id}]`) && /\.(jpg|jpeg|png|webp)$/i.test(f));
         const thumbnailRelPath = thumbFile ? path.join(job.userDirName, thumbFile) : null;
-        const channelName = [info.uploader, info.channel, job.options.channelName]
+        const channelName = [job.options.channelName, info.uploader, info.channel]
           .find((value) => value && value !== 'NA') || null;
 
         const mediaValues = [

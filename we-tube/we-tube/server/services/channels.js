@@ -102,6 +102,14 @@ async function checkChannelRow(ch, downloadCount = Infinity, createPending = fal
     let enqueued = 0;
     let pending = 0;
 
+    const canonicalName = fallbackChannelName(ch);
+    for (const video of recent) {
+      await pool.query(
+        'UPDATE media SET channel_name = $1 WHERE owner_id = $2 AND source_url = $3',
+        [canonicalName, ch.owner_id, video.url]
+      );
+    }
+
     for (const [index, v] of recent.entries()) {
       if (!knownUrls.has(v.url)) {
         if (index < downloadCount) {
@@ -109,7 +117,7 @@ async function checkChannelRow(ch, downloadCount = Infinity, createPending = fal
             ownerIdForDb: ch.owner_id,
             userDirName: ch.owner_username,
             url: v.url,
-            options: { mode: 'video', quality: 'best', isPlaylist: false, channelName: fallbackChannelName(ch) },
+            options: { mode: 'video', quality: 'best', isPlaylist: false, channelName: canonicalName },
             isIncognito: false,
           });
           enqueued += 1;
