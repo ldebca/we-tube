@@ -1,36 +1,314 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>we-tube</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/lucide@0.468.0" integrity="sha384-uTYyvsSSUZeaPhb5RbKlQa0zY/WpX/QHfvg2mczXyBQOpkWPEDy9lczyp+w7SKXu" crossorigin="anonymous"></script>
-<link rel="stylesheet" href="/css/styles.css"/>
-<script src="/js/theme.js"></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="theme-color" content="#0b0d10"/>
+  <meta name="description" content="Biblioteca multimedia personal de we-tube"/>
+  <title>we-tube · Biblioteca</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script
+    src="https://unpkg.com/lucide@0.468.0"
+    integrity="sha384-uTYyvsSSUZeaPhb5RbKlQa0zY/WpX/QHfvg2mczXyBQOpkWPEDy9lczyp+w7SKXu"
+    crossorigin="anonymous">
+  </script>
+
+  <link rel="stylesheet" href="/css/styles.css"/>
+  <script src="/js/theme.js"></script>
+
+  <style>
+    :root {
+      --catalog-gap: clamp(1rem, 1.5vw, 1.35rem);
+      --card-radius: 1rem;
+    }
+
+    .page-shell {
+      width: min(100%, 1800px);
+      margin-inline: auto;
+    }
+
+    .catalog-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      margin-inline: -1rem;
+      padding: .75rem 1rem;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+    }
+
+    .catalog-toolbar__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .catalog-title {
+      font-family: "Space Grotesk", sans-serif;
+      letter-spacing: -.025em;
+    }
+
+    .filter-list {
+      display: flex;
+      gap: .45rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .filter-list::-webkit-scrollbar {
+      display: none;
+    }
+
+    .wt-filter {
+      min-height: 2.5rem;
+      white-space: nowrap;
+      transition: transform .18s ease, background-color .18s ease, color .18s ease, box-shadow .18s ease;
+    }
+
+    .wt-filter:hover {
+      transform: translateY(-1px);
+    }
+
+    .wt-filter.is-active {
+      background: var(--accent-soft) !important;
+      color: var(--accent) !important;
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent);
+    }
+
+    .catalog-loading {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: var(--catalog-gap);
+    }
+
+    .skeleton {
+      border-radius: var(--card-radius);
+      background:
+        linear-gradient(
+          100deg,
+          color-mix(in srgb, var(--surface) 88%, transparent) 8%,
+          color-mix(in srgb, var(--surface-2, var(--surface)) 96%, transparent) 18%,
+          color-mix(in srgb, var(--surface) 88%, transparent) 33%
+        );
+      background-size: 200% 100%;
+      animation: shimmer 1.35s infinite linear;
+    }
+
+    .skeleton-thumb {
+      aspect-ratio: 16 / 9;
+      border-radius: var(--card-radius);
+    }
+
+    .skeleton-line {
+      height: .75rem;
+      margin-top: .65rem;
+      border-radius: 999px;
+    }
+
+    .skeleton-line.short {
+      width: 58%;
+    }
+
+    @keyframes shimmer {
+      to { background-position-x: -200%; }
+    }
+
+    .empty-state {
+      max-width: 42rem;
+      margin: 4rem auto;
+      padding: 3rem 1.5rem;
+      text-align: center;
+      border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+      border-radius: 1.5rem;
+      background: color-mix(in srgb, var(--surface) 72%, transparent);
+    }
+
+    .empty-state__icon {
+      width: 4rem;
+      height: 4rem;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 1rem;
+      border-radius: 1.25rem;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .thumb-wrap {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      background: var(--surface);
+      border-radius: var(--card-radius);
+      isolation: isolate;
+    }
+
+    .thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      transition: transform .28s ease, filter .28s ease;
+    }
+
+    .video-card {
+      content-visibility: auto;
+      contain-intrinsic-size: 250px 220px;
+      border-radius: var(--card-radius);
+    }
+
+    .video-card:hover .thumb-wrap img,
+    .video-card:focus-visible .thumb-wrap img {
+      transform: scale(1.035);
+      filter: brightness(.84);
+    }
+
+    .video-card:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 4px;
+    }
+
+    .card-play {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      z-index: 2;
+      width: 2.9rem;
+      height: 2.9rem;
+      display: grid;
+      place-items: center;
+      transform: translate(-50%, -50%) scale(.9);
+      opacity: 0;
+      border-radius: 999px;
+      color: #fff;
+      background: color-mix(in srgb, #000 62%, transparent);
+      backdrop-filter: blur(8px);
+      transition: opacity .2s ease, transform .2s ease;
+      pointer-events: none;
+    }
+
+    .video-card:hover .card-play,
+    .video-card:focus-visible .card-play {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .section-count {
+      color: var(--text-muted);
+      font-size: .78rem;
+      white-space: nowrap;
+    }
+
+    .sr-status {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (min-width: 768px) {
+      .catalog-toolbar {
+        margin-inline: -1.5rem;
+        padding-inline: 1.5rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .wt-filter,
+      .thumb-wrap img,
+      .card-play {
+        transition: none;
+      }
+
+      .skeleton {
+        animation: none;
+      }
+    }
+  </style>
 </head>
+
 <body>
   <div id="wt-nav"></div>
 
-  <div class="px-4 md:px-6 py-4">
-    <div class="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
-      <button data-type="video" class="wt-filter btn-ghost !border-0" style="background:var(--accent-soft);color:var(--accent)"><i data-lucide="clapperboard" class="ui-icon"></i> Videos</button>
-      <button data-type="audio" class="wt-filter btn-ghost !border-0"><i data-lucide="music-2" class="ui-icon"></i> Audio</button>
-      <button data-type="image" class="wt-filter btn-ghost !border-0"><i data-lucide="image" class="ui-icon"></i> Imagenes</button>
-    </div>
+  <main class="page-shell px-4 md:px-6">
+    <section class="catalog-toolbar" aria-label="Controles del catálogo">
+      <div class="catalog-toolbar__inner">
+        <div class="min-w-0">
+          <p class="catalog-title text-xl md:text-2xl font-bold truncate">Biblioteca</p>
+          <p class="text-xs md:text-sm mt-0.5 truncate" style="color:var(--text-muted)">
+            Tu contenido multimedia, organizado por canal
+          </p>
+        </div>
 
-    <div id="empty-state" class="hidden text-center py-24">
-      <p class="text-lg font-medium mb-1">Tu catalogo esta vacio</p>
-      <p class="text-sm mb-4" style="color:var(--text-muted)">Descarga contenido con yt-dlp o sube tus propios archivos para empezar.</p>
-      <div class="flex justify-center gap-3">
-        <a href="/download.html" class="btn-primary">Descargar de una URL</a>
-        <a href="/upload.html" class="btn-ghost">Subir archivo</a>
+        <div class="filter-list" role="group" aria-label="Filtrar por tipo">
+          <button
+            type="button"
+            data-type="video"
+            class="wt-filter btn-ghost !border-0 is-active"
+            aria-pressed="true">
+            <i data-lucide="clapperboard" class="ui-icon" aria-hidden="true"></i>
+            Videos
+          </button>
+
+          <button
+            type="button"
+            data-type="audio"
+            class="wt-filter btn-ghost !border-0"
+            aria-pressed="false">
+            <i data-lucide="music-2" class="ui-icon" aria-hidden="true"></i>
+            Audio
+          </button>
+
+          <button
+            type="button"
+            data-type="image"
+            class="wt-filter btn-ghost !border-0"
+            aria-pressed="false">
+            <i data-lucide="image" class="ui-icon" aria-hidden="true"></i>
+            Imágenes
+          </button>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div id="catalog-sections"></div>
-  </div>
+    <div id="catalog-status" class="sr-status" role="status" aria-live="polite"></div>
+
+    <section id="empty-state" class="empty-state hidden" aria-live="polite">
+      <div class="empty-state__icon" aria-hidden="true">
+        <i id="empty-icon" data-lucide="library-big"></i>
+      </div>
+
+      <h1 id="empty-title" class="text-xl md:text-2xl font-semibold">Tu catálogo está vacío</h1>
+
+      <p id="empty-description" class="text-sm mt-2 mb-6" style="color:var(--text-muted)">
+        Descarga contenido con yt-dlp o sube tus propios archivos para empezar.
+      </p>
+
+      <div class="flex flex-wrap justify-center gap-3">
+        <a href="/download.html" class="btn-primary inline-flex items-center gap-2">
+          <i data-lucide="download" class="ui-icon" aria-hidden="true"></i>
+          Descargar de una URL
+        </a>
+        <a href="/upload.html" class="btn-ghost inline-flex items-center gap-2">
+          <i data-lucide="upload" class="ui-icon" aria-hidden="true"></i>
+          Subir archivo
+        </a>
+      </div>
+    </section>
+
+    <section id="catalog-sections" aria-label="Contenido multimedia" class="pb-10"></section>
+  </main>
 
   <script src="/js/api.js"></script>
   <script src="/js/app.js"></script>
@@ -39,56 +317,206 @@
     let user = null;
     const NO_CHANNEL = 'Global (sin canal)';
 
-    function card(item) {
-      const thumb = item.thumbnail_path
-        ? `<img src="/media-files/${item.thumbnail_path}" loading="lazy"/>`
-        : item.media_type === 'image'
-          ? `<img src="/media-files/${item.relative_path}" loading="lazy"/>`
-          : `<div class="w-full h-full flex items-center justify-center text-3xl"><i data-lucide="${item.media_type === 'audio' ? 'music-2' : 'clapperboard'}" class="media-placeholder-icon"></i></div>`;
+    const TYPE_LABELS = {
+      video: 'videos',
+      audio: 'archivos de audio',
+      image: 'imágenes'
+    };
 
-      const meta = [item.channel_name, WT.fmtViews(item.view_count), WT.fmtDate(item.published_at || item.created_at)]
-        .filter(Boolean).join(' · ');
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[character]);
+    }
+
+    function mediaUrl(path) {
+      if (!path) return '';
+      return '/media-files/' + String(path)
+        .split('/')
+        .map((segment) => encodeURIComponent(segment))
+        .join('/');
+    }
+
+    function updateStatus(message) {
+      document.getElementById('catalog-status').textContent = message;
+    }
+
+    function setEmptyState({ title, description, icon = 'library-big', showActions = true }) {
+      const empty = document.getElementById('empty-state');
+      const emptyTitle = document.getElementById('empty-title');
+      const emptyDescription = document.getElementById('empty-description');
+      const emptyIcon = document.getElementById('empty-icon');
+
+      emptyTitle.textContent = title;
+      emptyDescription.textContent = description;
+      emptyIcon.setAttribute('data-lucide', icon);
+
+      empty.classList.remove('hidden');
+
+      const actions = empty.querySelector('.flex.flex-wrap');
+      if (actions) actions.classList.toggle('hidden', !showActions);
+
+      WT.refreshIcons();
+    }
+
+    function renderLoading() {
+      return `
+        <div class="catalog-loading" aria-hidden="true">
+          ${Array.from({ length: 8 }, () => `
+            <div class="min-w-0">
+              <div class="skeleton skeleton-thumb"></div>
+              <div class="skeleton skeleton-line"></div>
+              <div class="skeleton skeleton-line short"></div>
+            </div>
+          `).join('')}
+        </div>`;
+    }
+
+    function getStatus(itemId) {
+      return WT.getWatchStatus(itemId, user);
+    }
+
+    function card(item) {
+      const safeId = encodeURIComponent(String(item.id ?? ''));
+      const status = getStatus(item.id);
+      const statusKey = ['completed', 'progress', 'new'].includes(status.key) ? status.key : 'new';
+
+      const thumb = item.thumbnail_path
+        ? `<img src="${mediaUrl(item.thumbnail_path)}" alt="" loading="lazy" decoding="async"
+             onerror="this.onerror=null;this.style.display='none';"
+           />`
+        : item.media_type === 'image'
+          ? `<img src="${mediaUrl(item.relative_path)}" alt="" loading="lazy" decoding="async"
+               onerror="this.onerror=null;this.style.display='none';"
+             />`
+          : `<div class="w-full h-full flex items-center justify-center text-3xl" aria-hidden="true">
+               <i data-lucide="${item.media_type === 'audio' ? 'music-2' : 'clapperboard'}" class="media-placeholder-icon"></i>
+             </div>`;
+
+      const meta = [
+        item.channel_name,
+        WT.fmtViews(item.view_count),
+        WT.fmtDate(item.published_at || item.created_at)
+      ].filter(Boolean).map(escapeHtml).join(' · ');
+
+      const title = escapeHtml(item.title || item.file_name || 'Sin título');
+      const mediaType = escapeHtml(item.media_type || currentType);
 
       return `
-      <a href="/watch.html?id=${item.id}" class="video-card block">
-        <div class="thumb-wrap">
-          ${thumb}
-          ${item.duration_seconds ? `<span class="duration-badge">${WT.fmtDuration(item.duration_seconds)}</span>` : ''}
-          ${item.pending_download ? '<span class="download-pending-badge"><i data-lucide="clock-3" class="badge-icon"></i> Pendiente</span>' : ''}
-          ${(() => { const status = WT.getWatchStatus(item.id, user); return `<span class="watch-status watch-status-${status.key}">${status.label}</span>`; })()}
-        </div>
-        <div class="mt-2">
-          <p class="text-sm font-medium line-clamp-2">${item.title || item.file_name}</p>
-          <p class="text-xs mt-1" style="color:var(--text-muted)">${meta || 'Sin metadata'}</p>
-          <span class="type-badge mt-1 inline-flex items-center gap-1">${item.media_type}${item.favorite ? ' · <i data-lucide="star" class="badge-icon"></i>' : ''}</span>
-          ${(() => { const status = WT.getWatchStatus(item.id, user); return status.key === 'progress' ? `<div class="watch-progress mt-2"><span style="width:${Math.min(100, status.percent || 0)}%"></span></div>` : ''; })()}
-        </div>
-      </a>`;
+        <a
+          href="/watch.html?id=${safeId}"
+          class="video-card block"
+          aria-label="${title}"
+        >
+          <div class="thumb-wrap">
+            ${thumb}
+            <span class="card-play" aria-hidden="true">
+              <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+            </span>
+
+            ${item.duration_seconds
+              ? `<span class="duration-badge">${escapeHtml(WT.fmtDuration(item.duration_seconds))}</span>`
+              : ''}
+
+            ${item.pending_download
+              ? `<span class="download-pending-badge">
+                   <i data-lucide="clock-3" class="badge-icon" aria-hidden="true"></i>
+                   Pendiente
+                 </span>`
+              : ''}
+
+            <span class="watch-status watch-status-${statusKey}">
+              ${escapeHtml(status.label)}
+            </span>
+          </div>
+
+          <div class="mt-2.5">
+            <p class="text-sm font-semibold leading-5 line-clamp-2">${title}</p>
+
+            <p class="text-xs mt-1.5 leading-5 truncate" style="color:var(--text-muted)">
+              ${meta || 'Sin metadata'}
+            </p>
+
+            <span class="type-badge mt-1.5 inline-flex items-center gap-1">
+              ${mediaType}
+              ${item.favorite
+                ? ' · <i data-lucide="star" class="badge-icon fill-current" aria-label="Favorito"></i>'
+                : ''}
+            </span>
+
+            ${status.key === 'progress'
+              ? `<div
+                   class="watch-progress mt-2"
+                   role="progressbar"
+                   aria-label="Progreso de reproducción"
+                   aria-valuemin="0"
+                   aria-valuemax="100"
+                   aria-valuenow="${Math.min(100, Number(status.percent) || 0)}">
+                   <span style="width:${Math.min(100, Number(status.percent) || 0)}%"></span>
+                 </div>`
+              : ''}
+          </div>
+        </a>`;
     }
 
     function renderSections(items) {
       const groups = new Map();
+
       items.forEach((item) => {
-        const channel = item.channel_name && item.channel_name.trim() ? item.channel_name.trim() : NO_CHANNEL;
+        const channel = item.channel_name && item.channel_name.trim()
+          ? item.channel_name.trim()
+          : NO_CHANNEL;
+
         if (!groups.has(channel)) groups.set(channel, []);
         groups.get(channel).push(item);
       });
 
       return [...groups.entries()].map(([channel, channelItems]) => {
         const channelId = channelItems.find((item) => item.channel_id)?.channel_id;
-        const label = channel.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+        const label = escapeHtml(channel);
+
         return `
-        <section class="channel-section">
-          <div class="channel-section-header">
-            <div class="flex items-center gap-2 min-w-0">
-              <i data-lucide="${channel === NO_CHANNEL ? 'library' : 'radio'}" class="section-icon"></i>
-              <h2 class="text-lg font-semibold truncate">${label}</h2>
+          <section class="channel-section" aria-labelledby="channel-${escapeHtml(String(channelId || channel))}">
+            <div class="channel-section-header">
+              <div class="flex items-center gap-2 min-w-0">
+                <i
+                  data-lucide="${channel === NO_CHANNEL ? 'library' : 'radio'}"
+                  class="section-icon"
+                  aria-hidden="true"></i>
+
+                <h2
+                  id="channel-${escapeHtml(String(channelId || channel))}"
+                  class="text-lg font-semibold truncate">
+                  ${label}
+                </h2>
+              </div>
+
+              <span class="section-count">
+                ${channelItems.length}
+                ${channelItems.length === 1 ? 'elemento' : 'elementos'}
+              </span>
             </div>
-            <span class="text-xs shrink-0" style="color:var(--text-muted)">${channelItems.length} ${channelItems.length === 1 ? 'elemento' : 'elementos'}</span>
-          </div>
-          <div class="channel-grid">${channelItems.map(card).join('')}</div>
-          ${channelId ? `<div class="channel-section-footer"><button data-channel-id="${channelId}" class="wt-load-more-channel btn-ghost"><i data-lucide="list-plus" class="ui-icon"></i> Cargar más</button></div>` : ''}
-        </section>`;
+
+            <div class="channel-grid">
+              ${channelItems.map(card).join('')}
+            </div>
+
+            ${channelId
+              ? `<div class="channel-section-footer">
+                   <button
+                     type="button"
+                     data-channel-id="${escapeHtml(String(channelId))}"
+                     class="wt-load-more-channel btn-ghost">
+                     <i data-lucide="list-plus" class="ui-icon" aria-hidden="true"></i>
+                     Cargar más
+                   </button>
+                 </div>`
+              : ''}
+          </section>`;
       }).join('');
     }
 
@@ -96,17 +524,22 @@
       document.querySelectorAll('.wt-load-more-channel').forEach((button) => {
         button.onclick = async () => {
           button.disabled = true;
-          button.innerHTML = '<i data-lucide="loader-circle" class="ui-icon spin-icon"></i> Cargando...';
+          button.setAttribute('aria-busy', 'true');
+          button.innerHTML = '<i data-lucide="loader-circle" class="ui-icon spin-icon" aria-hidden="true"></i> Cargando...';
           WT.refreshIcons();
+
           try {
             const result = await WTApi.loadMoreChannel(button.dataset.channelId);
-            WT.toast(`${result.pending || 0} videos pendientes añadidos.`);
-            load(q);
+            const pending = Number(result?.pending) || 0;
+            WT.toast(`${pending} elementos pendientes añadidos.`);
+            updateStatus(`${pending} elementos pendientes añadidos.`);
+            await load(q);
           } catch (err) {
             button.disabled = false;
-            button.innerHTML = '<i data-lucide="list-plus" class="ui-icon"></i> Cargar más';
+            button.removeAttribute('aria-busy');
+            button.innerHTML = '<i data-lucide="list-plus" class="ui-icon" aria-hidden="true"></i> Cargar más';
             WT.refreshIcons();
-            WT.toast(err.message, true);
+            WT.toast(err?.message || 'No se pudo cargar más contenido.', true);
           }
         };
       });
@@ -115,38 +548,107 @@
     async function load(q) {
       const sections = document.getElementById('catalog-sections');
       const empty = document.getElementById('empty-state');
-      sections.innerHTML = '<p style="color:var(--text-muted)">Cargando...</p>';
+
+      empty.classList.add('hidden');
+      sections.classList.remove('hidden');
+      sections.innerHTML = renderLoading();
+      updateStatus(`Cargando ${TYPE_LABELS[currentType]}.`);
+
       try {
         const items = await WTApi.listMedia(q, currentType);
+        const hasQuery = Boolean(q?.trim());
+
+        if (!items?.length) {
+          sections.innerHTML = '';
+          sections.classList.add('hidden');
+
+          setEmptyState(
+            hasQuery
+              ? {
+                  title: 'No encontramos resultados',
+                  description: `No hay ${TYPE_LABELS[currentType]} que coincidan con “${q.trim()}”.`,
+                  icon: 'search-x',
+                  showActions: false
+                }
+              : {
+                  title: `No hay ${TYPE_LABELS[currentType]}`,
+                  description: 'Descarga contenido con yt-dlp o sube tus propios archivos para empezar.',
+                  icon: currentType === 'audio'
+                    ? 'music-2'
+                    : currentType === 'image'
+                      ? 'image'
+                      : 'clapperboard',
+                  showActions: true
+                }
+          );
+
+          updateStatus(`No hay ${TYPE_LABELS[currentType]}.`);
+          return;
+        }
+
         sections.innerHTML = renderSections(items);
         WT.refreshIcons();
         bindLoadMoreChannels(q);
-        empty.classList.toggle('hidden', items.length > 0);
-        sections.classList.toggle('hidden', items.length === 0);
+
+        updateStatus(`${items.length} ${TYPE_LABELS[currentType]} encontrados.`);
       } catch (err) {
         sections.innerHTML = '';
-        WT.toast(err.message, true);
+        sections.classList.add('hidden');
+        setEmptyState({
+          title: 'No se pudo cargar el catálogo',
+          description: err?.message || 'Ocurrió un error inesperado. Inténtalo de nuevo.',
+          icon: 'circle-alert',
+          showActions: false
+        });
+        WT.toast(err?.message || 'No se pudo cargar el catálogo.', true);
+        updateStatus('Error al cargar el catálogo.');
       }
     }
 
-    document.querySelectorAll('.wt-filter').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        currentType = btn.dataset.type;
-        document.querySelectorAll('.wt-filter').forEach((b) => {
-          b.style.background = ''; b.style.color = '';
-        });
-        btn.style.background = 'var(--accent-soft)'; btn.style.color = 'var(--accent)';
-        load(new URLSearchParams(location.search).get('q'));
+    function setActiveFilter(button) {
+      document.querySelectorAll('.wt-filter').forEach((btn) => {
+        const active = btn === button;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-pressed', String(active));
+      });
+    }
+
+    document.querySelectorAll('.wt-filter').forEach((button) => {
+      button.addEventListener('click', () => {
+        currentType = button.dataset.type || 'video';
+        setActiveFilter(button);
+
+        const url = new URL(location.href);
+        url.searchParams.set('type', currentType);
+
+        const q = url.searchParams.get('q');
+        if (q) url.searchParams.set('q', q);
+        history.replaceState(null, '', url);
+
+        load(q);
       });
     });
 
     (async () => {
       user = await WT.guard();
       if (!user) return;
+
       WT.renderNav('home', user);
-      const q = new URLSearchParams(location.search).get('q');
-      if (q) document.getElementById('wt-search').value = q;
-      load(q);
+
+      const params = new URLSearchParams(location.search);
+      const q = params.get('q');
+
+      const urlType = params.get('type');
+      if (['video', 'audio', 'image'].includes(urlType)) {
+        currentType = urlType;
+        const activeButton = document.querySelector(`.wt-filter[data-type="${CSS.escape(urlType)}"]`);
+        if (activeButton) setActiveFilter(activeButton);
+      }
+
+      const search = document.getElementById('wt-search');
+      if (q && search) search.value = q;
+
+      await load(q);
     })();
   </script>
 </body>
