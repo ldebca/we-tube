@@ -58,8 +58,19 @@ test('buildArgs: subtitulos agrega flags correctos con idiomas por defecto', () 
   assert.equal(args[idx + 1], 'es,en');
 });
 
-test('listChannelVideos: las opciones de paginacion van antes de --print', () => {
+test('classifyVideoKind: identifica normales, shorts y live a partir de metadata de yt-dlp', () => {
+  assert.equal(ytdlp.classifyVideoKind({ live_status: 'not_live', webpage_url: 'https://www.youtube.com/watch?v=abc123' }), 'normal');
+  assert.equal(ytdlp.classifyVideoKind({ is_short: true, webpage_url: 'https://www.youtube.com/shorts/abc123' }), 'short');
+  assert.equal(ytdlp.classifyVideoKind({ live_status: 'is_live', webpage_url: 'https://www.youtube.com/watch?v=live123' }), 'live');
+  assert.equal(ytdlp.classifyVideoKind({ live_status: 'was_live', webpage_url: 'https://www.youtube.com/watch?v=done123' }), 'live');
+  assert.equal(ytdlp.classifyVideoKind({ live_status: 'is_upcoming', webpage_url: 'https://www.youtube.com/watch?v=upcoming123' }), 'live');
+  assert.equal(ytdlp.classifyVideoKind({ video_kind: 'normal', source_url: 'https://www.youtube.com/shorts/abc123' }), 'short');
+  assert.equal(ytdlp.classifyVideoKind({ video_kind: 'normal', source_url: 'https://www.youtube.com/watch?v=live123', live_status: 'is_live' }), 'live');
+});
+
+test('listChannelVideos: las opciones de paginacion van antes de --print y agrega metadata de tipo', () => {
   const source = require('fs').readFileSync(path.join(__dirname, '../server/services/ytdlp.js'), 'utf8');
   assert.match(source, /const args = \['--flat-playlist'\];[\s\S]*args\.push\('--playlist-start'/);
-  assert.match(source, /args\.push\('--print', '%\(id\)s\|\|\|%\(title\)s/);
+  assert.match(source, /args\.push\(\s*'--print',\s*'%\(id\)s\|\|\|%\(title\)s/i);
+  assert.match(source, /is_short|live_status/i);
 });

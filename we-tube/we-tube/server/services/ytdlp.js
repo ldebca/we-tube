@@ -29,6 +29,20 @@ function getVersion() {
   });
 }
 
+function classifyVideoKind(video = {}) {
+  if (!video || typeof video !== 'object') return 'normal';
+  const shortPath = /\/shorts\//i.test(String(video.webpage_url || video.source_url || '')) || String(video.is_short || '').toLowerCase() === 'true';
+  if (shortPath) return 'short';
+
+  const liveStatus = String(video.live_status || video.liveStatus || video.status || '').trim().toLowerCase();
+  const isLiveFlag = Boolean(video.is_live || video.live || video.isLive);
+  const liveAlias = ['is_live', 'was_live', 'is_upcoming', 'was_upcoming', 'live', 'post_live', 'planned_live', 'premiere'];
+  if (isLiveFlag || liveAlias.includes(liveStatus) || /live/i.test(String(video.webpage_url || ''))) {
+    return 'live';
+  }
+  return 'normal';
+}
+
 /**
  * Traduce opciones amigables (desde el formulario web) a flags de yt-dlp.
  * options soporta:
@@ -167,7 +181,10 @@ function listChannelVideos(channelUrl, limit, start = 1) {
     if (Number.isFinite(limit)) {
       args.push('--playlist-start', String(start), '--playlist-end', String(start + limit - 1));
     }
-    args.push('--print', '%(id)s|||%(title)s|||%(webpage_url)s|||%(thumbnail)s|||%(uploader)s|||%(availability)s');
+    args.push(
+      '--print',
+      '%(id)s|||%(title)s|||%(webpage_url)s|||%(thumbnail)s|||%(uploader)s|||%(availability)s|||%(is_short)s|||%(live_status)s|||%(is_live)s'
+    );
     args.push(channelUrl);
     const proc = spawn(BIN, args);
     let out = '';
@@ -182,15 +199,20 @@ function listChannelVideos(channelUrl, limit, start = 1) {
         .split('\n')
         .filter(Boolean)
         .map((line) => {
-          const [id, title, url, thumbnail, channelName, availability] = line.split('|||');
-          return {
+          const [id, title, url, thumbnail, channelName, availability, isShort, liveStatus, isLive] = line.split('|||');
+          const normalizedVideo = {
             id,
             title: title === 'NA' ? null : title,
             url,
             thumbnail: thumbnail === 'NA' ? null : thumbnail,
             channelName: channelName === 'NA' ? null : channelName,
             availability: availability === 'NA' ? null : availability,
+            is_short: String(isShort || '').toLowerCase() === 'true',
+            live_status: liveStatus === 'NA' ? null : liveStatus,
+            is_live: String(isLive || '').toLowerCase() === 'true',
           };
+          normalizedVideo.video_kind = classifyVideoKind(normalizedVideo);
+          return normalizedVideo;
         });
       resolve(items);
     });
@@ -208,4 +230,4 @@ function findLatestInfoJson(outputDir) {
   return JSON.parse(fs.readFileSync(path.join(outputDir, files[0].f), 'utf-8'));
 }
 
-module.exports = { getVersion, buildArgs, runDownload, listChannelVideos, findLatestInfoJson, BIN };
+module.exports = { getVersion, buildArgs, runDownload, listChannelVideos, findLatestInfoJson, classifyVideoKind, BIN };

@@ -404,7 +404,16 @@
       ].filter(Boolean).map(escapeHtml).join(' · ');
 
       const title = escapeHtml(item.title || item.file_name || 'Sin título');
-      const mediaType = escapeHtml(item.media_type || currentType);
+      const mediaKind = item.media_type === 'video' ? normalizeVideoKind(item) : item.media_type || currentType;
+      const mediaTypeLabel = {
+        normal: 'Video',
+        short: 'Short',
+        live: 'Live',
+        video: 'Video',
+        audio: 'Audio',
+        image: 'Imagen'
+      }[mediaKind] || 'Video';
+      const mediaType = escapeHtml(mediaTypeLabel);
 
       return `
         <a
@@ -463,6 +472,22 @@
         </a>`;
     }
 
+    function normalizeVideoKind(item) {
+      if (!item || item.media_type !== 'video') return item?.media_type || 'normal';
+
+      const sourceUrl = String(item.source_url || item.webpage_url || item.url || '');
+      if (/\/shorts\//i.test(sourceUrl) || item.is_short) return 'short';
+
+      const liveStatus = String(item.live_status || item.liveStatus || '').trim().toLowerCase();
+      if (item.is_live || ['is_live', 'was_live', 'is_upcoming', 'was_upcoming', 'post_live', 'planned_live', 'premiere'].includes(liveStatus) || /live/i.test(sourceUrl)) {
+        return 'live';
+      }
+
+      const directKind = String(item.video_kind || item.kind || '').trim().toLowerCase();
+      if (['normal', 'short', 'live'].includes(directKind)) return directKind;
+      return 'normal';
+    }
+
     function renderSections(items) {
       const groups = new Map();
 
@@ -478,6 +503,55 @@
       return [...groups.entries()].map(([channel, channelItems]) => {
         const channelId = channelItems.find((item) => item.channel_id)?.channel_id;
         const label = escapeHtml(channel);
+        const isVideoSection = currentType === 'video' && channelItems.some((item) => item.media_type === 'video');
+
+        let body = `
+          <div class="channel-grid">
+            ${channelItems.map(card).join('')}
+          </div>`;
+
+        if (isVideoSection) {
+          const groupedByKind = new Map([
+            ['normal', []],
+            ['short', []],
+            ['live', []]
+          ]);
+
+          channelItems.forEach((item) => {
+            if (item.media_type !== 'video') return;
+            const kind = normalizeVideoKind(item);
+            if (!groupedByKind.has(kind)) groupedByKind.set(kind, []);
+            groupedByKind.get(kind).push(item);
+          });
+
+          body = [...groupedByKind.entries()]
+            .filter(([, kindItems]) => kindItems.length)
+            .map(([kind, kindItems]) => {
+              const kindLabels = {
+                normal: 'Videos normales',
+                short: 'Shorts',
+                live: 'Lives'
+              };
+              const kindIcons = {
+                normal: 'clapperboard',
+                short: 'badge-play',
+                live: 'radio'
+              };
+              return `
+                <div class="video-kind-section" data-kind="${escapeHtml(kind)}">
+                  <div class="video-kind-header">
+                    <h3 class="video-kind-title">
+                      <i data-lucide="${kindIcons[kind] || 'film'}" class="ui-icon" aria-hidden="true"></i>
+                      ${kindLabels[kind] || 'Otros'}
+                    </h3>
+                    <span class="video-kind-badge">${kindItems.length}</span>
+                  </div>
+                  <div class="channel-grid">
+                    ${kindItems.map(card).join('')}
+                  </div>
+                </div>`;
+            }).join('');
+        }
 
         return `
           <section class="channel-section" aria-labelledby="channel-${escapeHtml(String(channelId || channel))}">
@@ -501,9 +575,7 @@
               </span>
             </div>
 
-            <div class="channel-grid">
-              ${channelItems.map(card).join('')}
-            </div>
+            ${body}
 
             ${channelId
               ? `<div class="channel-section-footer">

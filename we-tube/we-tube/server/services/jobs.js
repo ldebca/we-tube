@@ -77,10 +77,13 @@ async function processNext() {
         const channelName = [job.options.channelName, info.uploader, info.channel]
           .find((value) => value && value !== 'NA') || null;
 
+        const mediaType = job.options.mode === 'audio' ? 'audio' : 'video';
+        const videoKind = mediaType === 'video' ? ytdlp.classifyVideoKind(info) : 'normal';
         const mediaValues = [
           fileGuess,
           path.join(job.userDirName, fileGuess),
-          job.options.mode === 'audio' ? 'audio' : 'video',
+          mediaType,
+          videoKind,
           info.title || fileGuess,
           channelName,
           info.view_count || null,
@@ -95,21 +98,21 @@ async function processNext() {
         ];
         if (job.options.pendingMediaId) {
           await pool.query(
-            `UPDATE media SET file_name = $1, relative_path = $2, media_type = $3, title = $4,
-              channel_name = $5, view_count = $6, like_count = $7, published_at = $8,
-              duration_seconds = $9, thumbnail_path = $10, source_url = $11,
-              file_size_bytes = $12, channel_id = $13, pending_download = FALSE
-             WHERE id = $14 AND owner_id = $15 AND pending_download = TRUE`,
+            `UPDATE media SET file_name = $1, relative_path = $2, media_type = $3, video_kind = $4, title = $5,
+              channel_name = $6, view_count = $7, like_count = $8, published_at = $9,
+              duration_seconds = $10, thumbnail_path = $11, source_url = $12,
+              file_size_bytes = $13, channel_id = $14, pending_download = FALSE
+             WHERE id = $15 AND owner_id = $16 AND pending_download = TRUE`,
             [...mediaValues, persistedChannelId, job.options.pendingMediaId, job.ownerIdForDb]
           );
         } else {
           await pool.query(
             `INSERT INTO media
-              (owner_id, channel_id, file_name, relative_path, media_type, title, channel_name,
+              (owner_id, channel_id, file_name, relative_path, media_type, video_kind, title, channel_name,
                view_count, like_count, published_at, duration_seconds, thumbnail_path,
                source_url, is_incognito, incognito_session_id, file_size_bytes)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-            [job.ownerIdForDb, persistedChannelId, ...mediaValues.slice(0, 11), job.isIncognito, job.incognitoSessionId || null, mediaValues[11]]
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+            [job.ownerIdForDb, persistedChannelId, ...mediaValues.slice(0, 12), job.isIncognito, job.incognitoSessionId || null, mediaValues[12]]
           );
         }
       }

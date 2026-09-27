@@ -107,11 +107,12 @@ async function downloadThumbnail(ch, video) {
 
 async function createPendingMedia(ch, video) {
   const thumbnailPath = await downloadThumbnail(ch, video);
+  const videoKind = ytdlp.classifyVideoKind(video);
   await pool.query(
     `INSERT INTO media
-      (owner_id, channel_id, media_type, title, channel_name, thumbnail_path, source_url, pending_download, is_incognito)
-     VALUES ($1,$2,'video',$3,$4,$5,$6,TRUE,FALSE)`,
-    [ch.owner_id, ch.id, video.title || video.id, video.channelName || fallbackChannelName(ch), thumbnailPath, video.url]
+      (owner_id, channel_id, media_type, video_kind, title, channel_name, thumbnail_path, source_url, pending_download, is_incognito)
+     VALUES ($1,$2,'video',$3,$4,$5,$6,$7,TRUE,FALSE)`,
+    [ch.owner_id, ch.id, videoKind, video.title || video.id, video.channelName || fallbackChannelName(ch), thumbnailPath, video.url]
   );
 }
 
