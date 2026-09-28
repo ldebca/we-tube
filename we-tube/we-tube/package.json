@@ -18,9 +18,9 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.4.0",
-    "node-cron": "^3.0.3",
+    "node-cron": "^4.6.0",
     "pg": "^8.11.5",
-    "uuid": "^9.0.1"
+    "uuid": "^14.0.2"
   },
   "devDependencies": {
     "supertest": "^6.3.4"
