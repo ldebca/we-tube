@@ -103,6 +103,33 @@ h1, h2, h3, .display {
 .video-card .watch-status-new { background: var(--accent); }
 .video-card .watch-status-progress { background: var(--teal); }
 .video-card .watch-status-watched { background: rgba(0,0,0,0.72); }
+.video-card .media-kind-overlay {
+  position: absolute; top: 6px; right: 6px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 4px;
+  color: #fff; font-size: 11px; font-weight: 700;
+  padding: 4px 7px; border-radius: 5px;
+  letter-spacing: 0.01em; text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+.video-card .media-kind-overlay-short {
+  background: rgba(190, 24, 93, 0.92);
+}
+.video-card .media-kind-overlay-live {
+  background: rgba(71, 85, 105, 0.92);
+}
+.video-card .media-kind-overlay-live.is-live-now {
+  background: var(--danger);
+  animation: live-badge-pulse 1.8s ease-in-out infinite;
+}
+.video-card .media-kind-overlay-live.is-live-now::before {
+  content: '';
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
+}
+@keyframes live-badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.32); }
+  50% { box-shadow: 0 0 0 5px rgba(220, 38, 38, 0); }
+}
 .video-card .download-pending-badge {
   position: absolute; bottom: 6px; left: 6px; display: inline-flex; align-items: center; gap: 4px;
   background: var(--accent); color: #fff; font-size: 11px; font-weight: 600;

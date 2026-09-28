@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" width="160" height="40">
+  <defs>
+    <linearGradient id="wt-grad-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="4" width="44" height="32" rx="10" fill="url(#wt-grad-light)"/>
+  <polygon points="20,13 31,20 20,27" fill="#FFFFFF"/>
+  <text x="56" y="27" font-family="'Space Grotesk', sans-serif" font-weight="700" font-size="22" fill="#0F172A">we<tspan fill="#7C3AED">-tube</tspan></text>
+</svg>

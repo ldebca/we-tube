@@ -1,5 +1,38 @@
-<svg width="120" height="28" viewBox="0 0 120 28" xmlns="http://www.w3.org/2000/svg">
-  <rect x="0" y="2" width="44" height="24" rx="8" fill="#7C3AED"/>
-  <path d="M18 8.5L30 14L18 19.5V8.5Z" fill="white"/>
-  <text x="50" y="20" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="currentColor">we-tube</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" width="160" height="40">
+  <defs>
+    <!-- Gradiente moderno para el isotipo -->
+    <linearGradient id="wt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+    
+    <style>
+      .logo-text {
+        font-family: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
+        font-weight: 700;
+        font-size: 22px;
+        fill: #0F172A; /* Color por defecto en modo claro */
+      }
+      .logo-accent {
+        fill: #8B5CF6;
+      }
+      /* Soporte para data-theme="dark" o preferencia del SO */
+      [data-theme="dark"] .logo-text,
+      :root:has([data-theme="dark"]) .logo-text {
+        fill: #F8FAFC;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .logo-text {
+          fill: #F8FAFC;
+        }
+      }
+    </style>
+  </defs>
+
+  <!-- Isotipo: Contenedor redondeado con gradiente y símbolo Play -->
+  <rect x="2" y="4" width="44" height="32" rx="10" fill="url(#wt-grad)"/>
+  <polygon points="20,13 31,20 20,27" fill="#FFFFFF"/>
+
+  <!-- Logotipo: Texto de la marca -->
+  <text x="56" y="27" class="logo-text">we<tspan class="logo-accent">-tube</tspan></text>
 </svg>

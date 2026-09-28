@@ -177,10 +177,13 @@ window.WT = (function () {
     const incognitoBadge = user && user.incognito
       ? `<span class="text-xs px-2 py-1 rounded-full inline-flex items-center gap-1" style="background:var(--accent-soft);color:var(--accent)"><i data-lucide="incognito" class="badge-icon"></i> Incognito</span>`
       : '';
+    const logoPath = document.documentElement.getAttribute('data-theme') === 'dark'
+      ? '/assets/logo-dark.svg'
+      : '/assets/logo-ligth.svg';
     document.getElementById('wt-nav').innerHTML = `
       <div class="flex items-center justify-between px-4 md:px-6 h-16 border-b" style="border-color:var(--border)">
         <div class="flex items-center gap-6">
-          <a href="/index.html" class="flex items-center"><img src="/assets/logo.svg" class="h-6" alt="we-tube"/></a>
+          <a href="/index.html" class="flex items-center"><img src="${logoPath}" data-theme-logo class="h-6" alt="we-tube"/></a>
           <div class="hidden md:flex items-center gap-1 flex-1 min-w-[320px]">
             <input id="wt-search" type="text" placeholder="Buscar en tu catalogo..." class="!rounded-r-none" style="max-width:420px"/>
             <button id="wt-search-btn" class="btn-ghost !rounded-l-none icon-button" aria-label="Buscar"><i data-lucide="search" class="ui-icon"></i></button>

@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#0b0d10"/>
   <meta name="description" content="Biblioteca multimedia personal de we-tube"/>
   <title>we-tube · Biblioteca</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -414,6 +415,19 @@
         image: 'Imagen'
       }[mediaKind] || 'Video';
       const mediaType = escapeHtml(mediaTypeLabel);
+      const liveStatus = String(item.live_status || item.liveStatus || '').trim().toLowerCase();
+      const isLiveNow = mediaKind === 'live' && (item.is_live || liveStatus === 'is_live');
+      const kindOverlay = mediaKind === 'short'
+        ? `<span class="media-kind-overlay media-kind-overlay-short">
+             <i data-lucide="smartphone" class="badge-icon" aria-hidden="true"></i>
+             Short
+           </span>`
+        : mediaKind === 'live'
+          ? `<span class="media-kind-overlay media-kind-overlay-live${isLiveNow ? ' is-live-now' : ''}">
+               <i data-lucide="radio" class="badge-icon" aria-hidden="true"></i>
+               ${isLiveNow ? 'En directo' : 'Live'}
+             </span>`
+          : '';
 
       return `
         <a
@@ -423,6 +437,7 @@
         >
           <div class="thumb-wrap">
             ${thumb}
+            ${kindOverlay}
             <span class="card-play" aria-hidden="true">
               <i data-lucide="play" class="w-5 h-5 fill-current"></i>
             </span>
