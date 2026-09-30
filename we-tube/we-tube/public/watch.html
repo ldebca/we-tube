@@ -64,7 +64,9 @@
         autoplayToggle.closest('label').classList.toggle('hidden', item.media_type !== 'video');
         autoplayToggle.checked = WT.getAutoplay(user);
         document.getElementById('title').textContent = item.title || item.file_name;
-        const meta = [item.channel_name, WT.fmtViews(item.view_count),
+        const displayChannel = item.channel_name || item.author_name || null;
+        const displayAuthor = item.author_name && item.author_name !== displayChannel ? item.author_name : null;
+        const meta = [displayChannel, displayAuthor, WT.fmtViews(item.view_count),
           item.like_count ? `${item.like_count} likes` : null,
           WT.fmtDate(item.published_at || item.created_at), WT.fmtBytes(item.file_size_bytes)]
           .filter(Boolean).join(' · ');

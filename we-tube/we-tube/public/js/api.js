@@ -35,11 +35,25 @@ window.WTApi = (function () {
     deleteJob: (id) => req('/downloads/' + id, { method: 'DELETE' }),
     listJobs: () => req('/downloads'),
 
-    upload: (file, onProgress) => {
+    upload: (file, metadataOrOnProgress, thumbnailFile, maybeOnProgress) => {
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '/api/upload');
         xhr.withCredentials = true;
+
+        let metadata = {};
+        let onProgress = typeof metadataOrOnProgress === 'function' ? metadataOrOnProgress : maybeOnProgress;
+        if (metadataOrOnProgress && typeof metadataOrOnProgress === 'object' && !(metadataOrOnProgress instanceof File || metadataOrOnProgress instanceof Blob)) {
+          metadata = metadataOrOnProgress;
+          if (typeof thumbnailFile !== 'function' && thumbnailFile && (thumbnailFile instanceof File || thumbnailFile instanceof Blob)) {
+            onProgress = maybeOnProgress;
+          } else {
+            onProgress = typeof thumbnailFile === 'function' ? thumbnailFile : maybeOnProgress;
+          }
+        } else if (metadataOrOnProgress && (metadataOrOnProgress instanceof File || metadataOrOnProgress instanceof Blob)) {
+          onProgress = typeof thumbnailFile === 'function' ? thumbnailFile : maybeOnProgress;
+        }
+
         xhr.upload.onprogress = (e) => {
           if (onProgress && e.lengthComputable) onProgress((e.loaded / e.total) * 100);
         };
@@ -50,6 +64,12 @@ window.WTApi = (function () {
         xhr.onerror = () => reject(new Error('Error de red al subir el archivo'));
         const fd = new FormData();
         fd.append('file', file);
+        if (metadata.title) fd.append('title', metadata.title);
+        if (metadata.channel) fd.append('channel', metadata.channel);
+        if (metadata.author) fd.append('author', metadata.author);
+        if (metadata.description) fd.append('description', metadata.description);
+        if (metadata.sourceUrl) fd.append('sourceUrl', metadata.sourceUrl);
+        if (thumbnailFile && (thumbnailFile instanceof File || thumbnailFile instanceof Blob)) fd.append('thumbnail', thumbnailFile);
         xhr.send(fd);
       });
     },

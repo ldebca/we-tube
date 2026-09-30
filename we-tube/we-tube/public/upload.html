@@ -24,6 +24,59 @@
       <input id="file-input" type="file" class="hidden" accept="video/*,audio/*,image/*"/>
     </label>
 
+    <form id="upload-form" class="card rounded-2xl p-5 mt-4 hidden">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <p class="text-sm font-medium">Detalles del archivo</p>
+          <p class="text-xs" style="color:var(--text-muted)">Completa la metadata para que se vea como un video de YouTube.</p>
+        </div>
+        <button id="clear-upload" type="button" class="btn-ghost text-xs">Cancelar</button>
+      </div>
+
+      <div class="grid gap-4">
+        <div>
+          <label for="upload-file-name" class="text-xs block mb-1" style="color:var(--text-muted)">Archivo</label>
+          <p id="upload-file-name" class="text-sm font-medium break-all"></p>
+        </div>
+
+        <div>
+          <label for="upload-title" class="text-xs block mb-1" style="color:var(--text-muted)">Título</label>
+          <input id="upload-title" type="text" maxlength="200" placeholder="Ej: Mi video favorito"/>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label for="upload-channel" class="text-xs block mb-1" style="color:var(--text-muted)">Canal</label>
+            <input id="upload-channel" type="text" maxlength="120" placeholder="Ej: Canal de pruebas"/>
+          </div>
+          <div>
+            <label for="upload-author" class="text-xs block mb-1" style="color:var(--text-muted)">Autor</label>
+            <input id="upload-author" type="text" maxlength="120" placeholder="Ej: Ana García"/>
+          </div>
+        </div>
+
+        <div>
+          <label for="upload-sourceUrl" class="text-xs block mb-1" style="color:var(--text-muted)">URL original (opcional)</label>
+          <input id="upload-sourceUrl" type="url" placeholder="https://..."/>
+        </div>
+
+        <div>
+          <label for="upload-description" class="text-xs block mb-1" style="color:var(--text-muted)">Descripción</label>
+          <textarea id="upload-description" rows="3" maxlength="1000" placeholder="Añade contexto, notas o detalles del archivo..."></textarea>
+        </div>
+
+        <div>
+          <label for="upload-thumbnail" class="text-xs block mb-1" style="color:var(--text-muted)">Miniatura personalizada</label>
+          <input id="upload-thumbnail" type="file" accept="image/*"/>
+          <p class="text-xs mt-1" style="color:var(--text-muted)">Se usa solo para este archivo. Si no eliges ninguna, queda la imagen por defecto.</p>
+        </div>
+      </div>
+
+      <div class="mt-5 flex justify-end">
+        <button id="upload-submit" type="submit" class="btn-primary">Subir archivo</button>
+      </div>
+    </form>
+
     <div id="progress-box" class="card rounded-xl p-4 mt-4 hidden">
       <p id="progress-name" class="text-sm font-medium mb-2"></p>
       <div class="progress-track"><div id="progress-fill" class="progress-fill" style="width:0%"></div></div>
@@ -41,27 +94,82 @@
 
       const input = document.getElementById('file-input');
       const dropzone = document.getElementById('dropzone');
+      const uploadForm = document.getElementById('upload-form');
+      const uploadTitle = document.getElementById('upload-title');
+      const uploadChannel = document.getElementById('upload-channel');
+      const uploadAuthor = document.getElementById('upload-author');
+      const uploadSourceUrl = document.getElementById('upload-sourceUrl');
+      const uploadDescription = document.getElementById('upload-description');
+      const uploadThumbnail = document.getElementById('upload-thumbnail');
+      const clearUpload = document.getElementById('clear-upload');
+      let selectedFile = null;
+      let selectedThumb = null;
+
       dropzone.addEventListener('click', () => input.click());
       dropzone.addEventListener('dragover', (e) => e.preventDefault());
       dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
         if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
       });
-      input.addEventListener('change', () => { if (input.files[0]) handleFile(input.files[0]); });
+      input.addEventListener('change', () => {
+        if (input.files[0]) handleFile(input.files[0]);
+      });
 
-      async function handleFile(file) {
+      clearUpload.addEventListener('click', () => {
+        input.value = '';
+        uploadThumbnail.value = '';
+        uploadForm.classList.add('hidden');
+        selectedFile = null;
+        selectedThumb = null;
+      });
+
+      uploadThumbnail.addEventListener('change', () => {
+        selectedThumb = uploadThumbnail.files[0] || null;
+      });
+
+      function resetUploadForm() {
+        uploadForm.reset();
+        selectedThumb = null;
+        uploadThumbnail.value = '';
+      }
+
+      function handleFile(file) {
+        selectedFile = file;
+        document.getElementById('upload-file-name').textContent = file.name;
+        resetUploadForm();
+        uploadTitle.value = file.name.replace(/\.[^/.]+$/, '');
+        uploadForm.classList.remove('hidden');
+        uploadForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      uploadForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!selectedFile) return;
+
+        const metadata = {
+          title: uploadTitle.value.trim(),
+          channel: uploadChannel.value.trim(),
+          author: uploadAuthor.value.trim(),
+          description: uploadDescription.value.trim(),
+          sourceUrl: uploadSourceUrl.value.trim(),
+        };
+
         document.getElementById('progress-box').classList.remove('hidden');
-        document.getElementById('progress-name').textContent = file.name;
+        document.getElementById('progress-name').textContent = selectedFile.name;
+        uploadForm.classList.add('hidden');
+        document.getElementById('progress-fill').style.width = '0%';
+
         try {
-          await WTApi.upload(file, (pct) => {
+          await WTApi.upload(selectedFile, metadata, selectedThumb, (pct) => {
             document.getElementById('progress-fill').style.width = pct + '%';
           });
           WT.toast('Archivo subido correctamente');
           setTimeout(() => { window.location.href = '/index.html'; }, 700);
         } catch (err) {
           WT.toast(err.message, true);
+          uploadForm.classList.remove('hidden');
         }
-      }
+      });
     })();
   </script>
 </body>

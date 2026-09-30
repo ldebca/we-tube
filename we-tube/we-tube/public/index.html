@@ -398,8 +398,11 @@
                <i data-lucide="${item.media_type === 'audio' ? 'music-2' : 'clapperboard'}" class="media-placeholder-icon"></i>
              </div>`;
 
+      const displayChannel = item.channel_name || item.author_name || null;
+      const displayAuthor = item.author_name && item.author_name !== displayChannel ? item.author_name : null;
       const meta = [
-        item.channel_name,
+        displayChannel,
+        displayAuthor,
         WT.fmtViews(item.view_count),
         WT.fmtDate(item.published_at || item.created_at)
       ].filter(Boolean).map(escapeHtml).join(' · ');

@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS media (
   video_kind VARCHAR(16) NOT NULL DEFAULT 'normal', -- normal | short | live
   title TEXT,
   channel_name TEXT,
+  author_name TEXT,
+  description TEXT,
   view_count BIGINT,
   like_count BIGINT,
   published_at TIMESTAMPTZ,
@@ -53,6 +55,8 @@ ALTER TABLE media ALTER COLUMN file_name DROP NOT NULL;
 ALTER TABLE media ALTER COLUMN relative_path DROP NOT NULL;
 ALTER TABLE media ADD COLUMN IF NOT EXISTS pending_download BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE media ADD COLUMN IF NOT EXISTS video_kind VARCHAR(16) NOT NULL DEFAULT 'normal';
+ALTER TABLE media ADD COLUMN IF NOT EXISTS author_name TEXT;
+ALTER TABLE media ADD COLUMN IF NOT EXISTS description TEXT;
 CREATE INDEX IF NOT EXISTS idx_media_video_kind ON media(video_kind);
 
 CREATE TABLE IF NOT EXISTS download_jobs (
@@ -90,6 +94,8 @@ CREATE INDEX IF NOT EXISTS idx_jobs_channel ON download_jobs(channel_id);
 
 const MIGRATION_SQL = [
   "ALTER TABLE media ADD COLUMN IF NOT EXISTS video_kind VARCHAR(16) NOT NULL DEFAULT 'normal';",
+  "ALTER TABLE media ADD COLUMN IF NOT EXISTS author_name TEXT;",
+  "ALTER TABLE media ADD COLUMN IF NOT EXISTS description TEXT;",
   'CREATE INDEX IF NOT EXISTS idx_media_video_kind ON media(video_kind);',
   "ALTER TABLE media ALTER COLUMN video_kind SET DEFAULT 'normal';",
 ];
