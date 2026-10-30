@@ -14,33 +14,45 @@
 <body>
   <div id="wt-nav"></div>
   <div class="watch-layout">
-    <main>
-      <div id="player-wrap" class="rounded-xl overflow-hidden" style="background:#000"></div>
+    <main class="watch-main">
+      <div class="watch-player-frame">
+        <div id="player-wrap" style="background:#000"></div>
+      </div>
 
-      <div class="mt-4 flex items-start justify-between gap-4">
-        <div>
+      <div class="watch-heading">
+        <div class="watch-title-block">
+          <p class="watch-eyebrow"><i data-lucide="play-circle" class="badge-icon"></i> Reproduciendo ahora</p>
           <h1 id="title" class="text-xl font-semibold"></h1>
           <p id="meta" class="text-sm mt-1" style="color:var(--text-muted)"></p>
         </div>
-        <div class="flex gap-2 shrink-0">
+        <div class="watch-actions">
           <button id="fav-btn" class="btn-ghost"><i data-lucide="star" class="ui-icon"></i> Favorito</button>
           <button id="delete-btn" class="btn-ghost" style="color:var(--danger)"><i data-lucide="trash-2" class="ui-icon"></i> Eliminar</button>
         </div>
       </div>
 
-      <label class="autoplay-control mt-4">
-        <input id="autoplay-toggle" type="checkbox" class="w-auto"/>
-        <span>Reproducir automáticamente el siguiente video</span>
-      </label>
+      <div class="watch-preferences">
+        <label class="watch-option">
+          <input id="autoplay-toggle" type="checkbox" class="w-auto"/>
+          <span><strong>Autoplay</strong><small>Siguiente video al terminar</small></span>
+        </label>
+        <label id="expire-after-view-wrap" class="watch-option hidden">
+          <input id="expire-after-view" type="checkbox" class="w-auto"/>
+          <span><strong>Ver una vez</strong><small>Conservar como pendiente al terminar</small></span>
+        </label>
+      </div>
 
-      <div id="source-info" class="card rounded-xl p-4 mt-4 text-sm hidden">
-        <p style="color:var(--text-muted)">Fuente original</p>
+      <div id="source-info" class="source-info card rounded-xl p-4 mt-4 text-sm hidden">
+        <p class="source-info-label">Fuente original</p>
         <a id="source-link" href="#" target="_blank" class="break-all" style="color:var(--accent)"></a>
       </div>
     </main>
     <aside id="up-next" class="watch-queue hidden" aria-label="Siguientes videos">
-      <div class="flex items-center justify-between gap-3 mb-3">
-        <h2 class="text-lg font-semibold">Siguientes</h2>
+      <div class="watch-queue-header">
+        <div>
+          <p class="watch-eyebrow"><i data-lucide="list-video" class="badge-icon"></i> Continuar viendo</p>
+          <h2 class="text-lg font-semibold">Siguientes</h2>
+        </div>
         <span id="queue-count" class="text-xs" style="color:var(--text-muted)"></span>
       </div>
       <div id="queue-list" class="space-y-3"></div>
@@ -61,7 +73,10 @@
       try {
         const item = await WTApi.getMedia(id);
         const autoplayToggle = document.getElementById('autoplay-toggle');
+        const expireAfterViewWrap = document.getElementById('expire-after-view-wrap');
+        const expireAfterView = document.getElementById('expire-after-view');
         autoplayToggle.closest('label').classList.toggle('hidden', item.media_type !== 'video');
+        expireAfterViewWrap.classList.toggle('hidden', item.media_type !== 'video' || item.pending_download);
         autoplayToggle.checked = WT.getAutoplay(user);
         document.getElementById('title').textContent = item.title || item.file_name;
         const displayChannel = item.channel_name || item.author_name || null;
@@ -115,8 +130,8 @@
             <div class="pending-player-overlay">
               <i data-lucide="download" class="pending-player-icon"></i>
               <p class="font-medium">Video pendiente de descarga</p>
-              <p class="text-sm" style="color:var(--text-muted)">Inicia la descarga para comenzar a reproducirlo.</p>
-              <button id="download-pending" class="btn-primary"><i data-lucide="download" class="ui-icon"></i> Descargar y reproducir</button>
+              <p class="text-sm" style="color:var(--text-muted)">Descargaremos una vista rapida en 360p para comenzar a reproducirlo antes.</p>
+              <button id="download-pending" class="btn-primary"><i data-lucide="download" class="ui-icon"></i> Descargar vista rapida</button>
               <div id="pending-progress-wrap" class="pending-progress-wrap hidden">
                 <div class="pending-progress-track"><div id="pending-progress-fill" class="pending-progress-fill"></div></div>
                 <p id="pending-progress-label" class="text-xs">En cola: 0%</p>
@@ -133,7 +148,7 @@
               const job = await WTApi.startDownload({
                 url: item.source_url,
                 mode: 'video',
-                quality: 'best',
+                quality: '360',
                 isPlaylist: false,
                 pendingMediaId: item.id,
               });
@@ -165,16 +180,85 @@
               }, 2000);
             } catch (err) {
               button.disabled = false;
-              button.innerHTML = '<i data-lucide="download" class="ui-icon"></i> Descargar y reproducir';
+              button.innerHTML = '<i data-lucide="download" class="ui-icon"></i> Descargar vista rapida';
               WT.refreshIcons();
               WT.toast(err.message, true);
             }
           };
         } else if (item.media_type === 'video') {
-          wrap.innerHTML = `<video src="${src}" controls autoplay class="w-full" style="height:100%;max-height:100%;object-fit:contain"></video>`;
+          let audioTracks = [];
+          try { audioTracks = await WTApi.getAudioTracks(item.id); } catch (error) { /* pista unica o ffprobe no disponible */ }
+          const trackLabel = (track, index) => {
+            const language = track.language || 'Idioma no identificado';
+            const title = track.title ? ` · ${track.title}` : '';
+            return `${language}${title}${track.isDefault ? ' · Predeterminado' : ''} (${index + 1})`;
+          };
+          const trackSelector = audioTracks.length > 1
+            ? `<label class="audio-track-control"><i data-lucide="languages" class="ui-icon"></i><span>Pista de audio</span><select id="audio-track-select">${audioTracks.map((track, index) => `<option value="${index}"${track.isDefault ? ' selected' : ''}>${trackLabel(track, index)}</option>`).join('')}</select></label>`
+            : '';
+          const qualitySelector = item.source_url
+            ? `<label class="quality-control"><i data-lucide="gauge" class="ui-icon"></i><span>Resolucion</span><select id="video-quality-select"><option value="360">360p · Rapida</option><option value="480">480p</option><option value="720">720p · HD</option><option value="1080" selected>1080p · Full HD</option><option value="1440">1440p · 2K</option><option value="2160">2160p · 4K</option></select></label>`
+            : '';
+          wrap.innerHTML = `<div class="video-player-shell"><video src="${src}" controls autoplay class="w-full" style="height:100%;max-height:100%;object-fit:contain"></video><div class="player-options">${qualitySelector}${trackSelector}</div></div>`;
           const player = wrap.querySelector('video');
+          let expiredAfterView = false;
+          const qualitySelect = wrap.querySelector('#video-quality-select');
+          if (qualitySelect) {
+            qualitySelect.onchange = async () => {
+              const quality = qualitySelect.value;
+              qualitySelect.disabled = true;
+              try {
+                const job = await WTApi.requestMediaQuality(item.id, quality);
+                WT.toast(`Preparando ${quality}p...`);
+                const poll = setInterval(async () => {
+                  try {
+                    const status = await WTApi.getJob(job.jobId);
+                    if (status.status === 'done') {
+                      clearInterval(poll);
+                      window.location.reload();
+                    } else if (status.status === 'error') {
+                      clearInterval(poll);
+                      qualitySelect.disabled = false;
+                      WT.toast(status.error || 'No se pudo cambiar la resolucion.', true);
+                    }
+                  } catch (error) {
+                    clearInterval(poll);
+                    qualitySelect.disabled = false;
+                    WT.toast(error.message, true);
+                  }
+                }, 2000);
+              } catch (error) {
+                qualitySelect.disabled = false;
+                WT.toast(error.message, true);
+              }
+            };
+          }
+          const trackSelect = wrap.querySelector('#audio-track-select');
+          if (trackSelect) {
+            trackSelect.onchange = () => {
+              const position = player.currentTime;
+              const wasPaused = player.paused;
+              player.src = `${src}?audioTrack=${encodeURIComponent(trackSelect.value)}`;
+              player.addEventListener('loadedmetadata', () => {
+                player.currentTime = Math.min(position, player.duration || position);
+                if (!wasPaused) player.play().catch(() => {});
+              }, { once: true });
+              player.load();
+            };
+            WT.refreshIcons();
+          }
           WT.trackPlayback(item.id, user, player);
-          player.addEventListener('ended', () => {
+          player.addEventListener('ended', async () => {
+            if (expireAfterView.checked && !expiredAfterView) {
+              expiredAfterView = true;
+              try {
+                await WTApi.expireAfterView(item.id);
+                WT.toast('Video eliminado y conservado como pendiente.');
+              } catch (error) {
+                expiredAfterView = false;
+                WT.toast(error.message || 'No se pudo conservar el video como pendiente.', true);
+              }
+            }
             if (autoplayToggle.checked && nextItems[0]) window.location.href = `/watch.html?id=${nextItems[0].id}`;
           });
         } else if (item.media_type === 'audio') {

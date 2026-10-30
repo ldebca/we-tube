@@ -60,7 +60,9 @@ async function processNext() {
     if (info) {
       const persistedChannelId = job.channelId &&
         (await pool.query('SELECT id FROM channels WHERE id = $1', [job.channelId])).rows[0]?.id || null;
-      const ext = job.options.mode === 'audio' ? (job.options.audioFormat || 'mp3') : 'mp4';
+      const ext = job.options.mode === 'audio'
+        ? (job.options.audioFormat || 'mp3')
+        : (job.options.audioMultistreams ? 'mkv' : 'mp4');
       const fileGuess = fs
         .readdirSync(outDir)
         .filter((f) => f.endsWith('.' + ext) && f.includes(`[${info.id}]`))
@@ -78,7 +80,11 @@ async function processNext() {
           .find((value) => value && value !== 'NA') || null;
 
         const mediaType = job.options.mode === 'audio' ? 'audio' : 'video';
-        const videoKind = mediaType === 'video' ? ytdlp.classifyVideoKind(info) : 'normal';
+        const videoKind = mediaType === 'video'
+          ? (['normal', 'short', 'live'].includes(job.options.videoKind)
+            ? job.options.videoKind
+            : ytdlp.classifyVideoKind(info))
+          : 'normal';
         const mediaValues = [
           fileGuess,
           path.join(job.userDirName, fileGuess),
@@ -104,6 +110,15 @@ async function processNext() {
               file_size_bytes = $13, channel_id = $14, pending_download = FALSE
              WHERE id = $15 AND owner_id = $16 AND pending_download = TRUE`,
             [...mediaValues, persistedChannelId, job.options.pendingMediaId, job.ownerIdForDb]
+          );
+        } else if (job.replaceMediaId) {
+          await pool.query(
+            `UPDATE media SET file_name = $1, relative_path = $2, media_type = $3, video_kind = $4, title = $5,
+              channel_name = $6, view_count = $7, like_count = $8, published_at = $9,
+              duration_seconds = $10, thumbnail_path = $11, source_url = $12,
+              file_size_bytes = $13, channel_id = $14, pending_download = FALSE
+             WHERE id = $15 AND owner_id = $16`,
+            [...mediaValues, persistedChannelId, job.replaceMediaId, job.ownerIdForDb]
           );
         } else {
           await pool.query(
@@ -133,14 +148,14 @@ async function processNext() {
  * ownerIdForDb: UUID real del usuario, o null si es incognito (no se persiste owner)
  * userDirName: carpeta destino dentro de media/ (ej: username o _incognito/<sessionId>)
  */
-async function enqueueDownload({ ownerIdForDb, channelId, userDirName, url, options, isIncognito, incognitoSessionId }) {
+async function enqueueDownload({ ownerIdForDb, channelId, userDirName, url, options, replaceMediaId, isIncognito, incognitoSessionId }) {
   const { rows } = await pool.query(
     `INSERT INTO download_jobs (owner_id, channel_id, url, status, options_json, is_incognito, incognito_session_id)
      VALUES ($1,$2,$3,'queued',$4,$5,$6) RETURNING id`,
     [ownerIdForDb, channelId || null, url, JSON.stringify(options), !!isIncognito, incognitoSessionId || null]
   );
   const id = rows[0].id;
-  queue.push({ id, ownerIdForDb, channelId: channelId || null, userDirName, options: { ...options, url }, isIncognito, incognitoSessionId });
+  queue.push({ id, ownerIdForDb, channelId: channelId || null, userDirName, replaceMediaId: replaceMediaId || null, options: { ...options, url }, isIncognito, incognitoSessionId });
   processNext();
   return id;
 }

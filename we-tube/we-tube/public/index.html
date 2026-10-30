@@ -49,6 +49,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
+      flex-wrap: wrap;
     }
 
     .catalog-title {
@@ -66,6 +67,20 @@
     .filter-list::-webkit-scrollbar {
       display: none;
     }
+
+    .catalog-toolbar__tools {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: .6rem;
+      min-width: 0;
+    }
+
+    .catalog-search-mobile { display: none; min-width: 0; }
+    .catalog-search-mobile input { min-width: 0; border-radius: 10px 0 0 10px; }
+    .catalog-search-mobile button { border-radius: 0 10px 10px 0; }
+    .catalog-sort { width: auto; min-width: 150px; }
+    .catalog-result-count { color: var(--text-muted); font-size: .78rem; white-space: nowrap; }
 
     .wt-filter {
       min-height: 2.5rem;
@@ -225,6 +240,16 @@
       }
     }
 
+    @media (max-width: 767px) {
+      .catalog-toolbar__inner { align-items: stretch; }
+      .catalog-toolbar__inner > .min-w-0 { flex: 1 1 100%; }
+      .catalog-toolbar__tools { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+      .catalog-search-mobile { display: flex; flex: 1 1 100%; }
+      .catalog-search-mobile input { flex: 1; }
+      .filter-list { flex: 1 1 auto; min-width: 0; }
+      .catalog-sort { flex: 0 1 150px; }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .wt-filter,
       .thumb-wrap img,
@@ -252,7 +277,20 @@
           </p>
         </div>
 
-        <div class="filter-list" role="group" aria-label="Filtrar por tipo">
+        <div class="catalog-toolbar__tools">
+          <form id="catalog-search-mobile" class="catalog-search-mobile" role="search">
+            <label for="library-search" class="sr-only">Buscar en la biblioteca</label>
+            <input id="library-search" type="search" placeholder="Buscar en tu biblioteca..." autocomplete="off"/>
+            <button type="submit" class="btn-ghost icon-button" aria-label="Buscar en la biblioteca"><i data-lucide="search" class="ui-icon"></i></button>
+          </form>
+
+          <select id="catalog-sort" class="catalog-sort" aria-label="Ordenar biblioteca">
+            <option value="recent">Más recientes</option>
+            <option value="oldest">Más antiguos</option>
+            <option value="title">Título A-Z</option>
+          </select>
+
+          <div class="filter-list" role="group" aria-label="Filtrar por tipo">
           <button
             type="button"
             data-type="video"
@@ -279,6 +317,8 @@
             <i data-lucide="image" class="ui-icon" aria-hidden="true"></i>
             Imágenes
           </button>
+          </div>
+          <span id="catalog-result-count" class="catalog-result-count" aria-live="polite"></span>
         </div>
       </div>
     </section>
@@ -306,6 +346,7 @@
           Subir archivo
         </a>
       </div>
+      <button id="empty-retry" type="button" class="btn-ghost hidden mt-4">Reintentar</button>
     </section>
 
     <section id="catalog-sections" aria-label="Contenido multimedia" class="pb-10"></section>
@@ -315,6 +356,7 @@
   <script src="/js/app.js"></script>
   <script>
     let currentType = 'video';
+    let currentSort = 'recent';
     let user = null;
     const NO_CHANNEL = 'Global (sin canal)';
 
@@ -346,11 +388,12 @@
       document.getElementById('catalog-status').textContent = message;
     }
 
-    function setEmptyState({ title, description, icon = 'library-big', showActions = true }) {
+    function setEmptyState({ title, description, icon = 'library-big', showActions = true, showRetry = false }) {
       const empty = document.getElementById('empty-state');
       const emptyTitle = document.getElementById('empty-title');
       const emptyDescription = document.getElementById('empty-description');
       const emptyIcon = document.getElementById('empty-icon');
+      const retry = document.getElementById('empty-retry');
 
       emptyTitle.textContent = title;
       emptyDescription.textContent = description;
@@ -360,6 +403,7 @@
 
       const actions = empty.querySelector('.flex.flex-wrap');
       if (actions) actions.classList.toggle('hidden', !showActions);
+      retry.classList.toggle('hidden', !showRetry);
 
       WT.refreshIcons();
     }
@@ -506,6 +550,19 @@
       return 'normal';
     }
 
+    function sortItems(items) {
+      return [...items].sort((left, right) => {
+        if (currentSort === 'title') {
+          return String(left.title || left.file_name || '').localeCompare(
+            String(right.title || right.file_name || ''), 'es', { sensitivity: 'base' }
+          );
+        }
+        const leftDate = new Date(left.published_at || left.created_at || 0).getTime();
+        const rightDate = new Date(right.published_at || right.created_at || 0).getTime();
+        return currentSort === 'oldest' ? leftDate - rightDate : rightDate - leftDate;
+      });
+    }
+
     function renderSections(items) {
       const groups = new Map();
 
@@ -520,6 +577,7 @@
 
       return [...groups.entries()].map(([channel, channelItems]) => {
         const channelId = channelItems.find((item) => item.channel_id)?.channel_id;
+          const channelThumbnail = channelItems.find((item) => item.channel_thumbnail)?.channel_thumbnail;
         const label = escapeHtml(channel);
         const isVideoSection = currentType === 'video' && channelItems.some((item) => item.media_type === 'video');
 
@@ -575,10 +633,9 @@
           <section class="channel-section" aria-labelledby="channel-${escapeHtml(String(channelId || channel))}">
             <div class="channel-section-header">
               <div class="flex items-center gap-2 min-w-0">
-                <i
-                  data-lucide="${channel === NO_CHANNEL ? 'library' : 'radio'}"
-                  class="section-icon"
-                  aria-hidden="true"></i>
+                ${channelThumbnail
+                  ? `<img src="${escapeHtml(channelThumbnail)}" class="channel-section-avatar" alt="" loading="lazy" onerror="this.onerror=null;this.style.display='none';"/>`
+                  : `<i data-lucide="${channel === NO_CHANNEL ? 'library' : 'radio'}" class="section-icon" aria-hidden="true"></i>`}
 
                 <h2
                   id="channel-${escapeHtml(String(channelId || channel))}"
@@ -601,8 +658,8 @@
                      type="button"
                      data-channel-id="${escapeHtml(String(channelId))}"
                      class="wt-load-more-channel btn-ghost">
-                     <i data-lucide="list-plus" class="ui-icon" aria-hidden="true"></i>
-                     Cargar más
+                     <i data-lucide="refresh-cw" class="ui-icon" aria-hidden="true"></i>
+                     Buscar novedades
                    </button>
                  </div>`
               : ''}
@@ -627,7 +684,7 @@
           } catch (err) {
             button.disabled = false;
             button.removeAttribute('aria-busy');
-            button.innerHTML = '<i data-lucide="list-plus" class="ui-icon" aria-hidden="true"></i> Cargar más';
+            button.innerHTML = '<i data-lucide="refresh-cw" class="ui-icon" aria-hidden="true"></i> Buscar novedades';
             WT.refreshIcons();
             WT.toast(err?.message || 'No se pudo cargar más contenido.', true);
           }
@@ -651,6 +708,7 @@
         if (!items?.length) {
           sections.innerHTML = '';
           sections.classList.add('hidden');
+          document.getElementById('catalog-result-count').textContent = '';
 
           setEmptyState(
             hasQuery
@@ -676,7 +734,8 @@
           return;
         }
 
-        sections.innerHTML = renderSections(items);
+        sections.innerHTML = renderSections(sortItems(items));
+        document.getElementById('catalog-result-count').textContent = `${items.length} ${TYPE_LABELS[currentType]}`;
         WT.refreshIcons();
         bindLoadMoreChannels(q);
 
@@ -688,12 +747,31 @@
           title: 'No se pudo cargar el catálogo',
           description: err?.message || 'Ocurrió un error inesperado. Inténtalo de nuevo.',
           icon: 'circle-alert',
-          showActions: false
+            showActions: false,
+            showRetry: true
         });
         WT.toast(err?.message || 'No se pudo cargar el catálogo.', true);
         updateStatus('Error al cargar el catálogo.');
       }
     }
+
+    document.getElementById('catalog-search-mobile').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const q = document.getElementById('library-search').value.trim();
+      const url = new URL(location.href);
+      if (q) url.searchParams.set('q', q); else url.searchParams.delete('q');
+      history.replaceState(null, '', url);
+      load(q);
+    });
+
+    document.getElementById('catalog-sort').addEventListener('change', (event) => {
+      currentSort = event.target.value;
+      load(new URLSearchParams(location.search).get('q'));
+    });
+
+    document.getElementById('empty-retry').addEventListener('click', () => {
+      load(new URLSearchParams(location.search).get('q'));
+    });
 
     function setActiveFilter(button) {
       document.querySelectorAll('.wt-filter').forEach((btn) => {
@@ -737,6 +815,8 @@
 
       const search = document.getElementById('wt-search');
       if (q && search) search.value = q;
+      const mobileSearch = document.getElementById('library-search');
+      if (q && mobileSearch) mobileSearch.value = q;
 
       await load(q);
     })();

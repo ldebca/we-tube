@@ -69,6 +69,24 @@
             <input id="subLangs" type="text" placeholder="es,en" style="max-width:120px"/>
           </div>
           <div class="grid grid-cols-2 gap-3">
+            <label class="flex items-center gap-2"><input id="embedThumbnail" type="checkbox" class="w-auto"/> Incrustar miniatura</label>
+            <label class="flex items-center gap-2"><input id="embedChapters" type="checkbox" class="w-auto"/> Incrustar capitulos</label>
+          </div>
+          <label class="flex items-center gap-2"><input id="audioMultistreams" type="checkbox" class="w-auto"/> Descargar todas las pistas de audio disponibles</label>
+          <p class="text-xs" style="color:var(--text-muted)">Se guardaran dentro del video cuando yt-dlp y ffmpeg las proporcionen.</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="sponsorblockRemove" class="text-xs block mb-1" style="color:var(--text-muted)">SponsorBlock</label>
+              <select id="sponsorblockRemove">
+                <option value="">No modificar</option>
+                <option value="sponsor">Eliminar patrocinadores</option>
+                <option value="sponsor,intro,outro,selfpromo,interaction">Eliminar segmentos comunes</option>
+                <option value="all">Eliminar todos los segmentos</option>
+              </select>
+            </div>
+            <label class="flex items-center gap-2 pt-5"><input id="liveFromStart" type="checkbox" class="w-auto"/> Directo desde el inicio</label>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="text-xs block mb-1" style="color:var(--text-muted)">Formato de audio (si aplica)</label>
               <select id="audioFormat"><option value="mp3">mp3</option><option value="m4a">m4a</option><option value="opus">opus</option></select>
@@ -76,6 +94,36 @@
             <div>
               <label class="text-xs block mb-1" style="color:var(--text-muted)">Limite de velocidad</label>
               <input id="rateLimit" type="text" placeholder="ej: 2M"/>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="retries" class="text-xs block mb-1" style="color:var(--text-muted)">Reintentos de descarga</label>
+              <input id="retries" type="number" min="0" max="20" placeholder="Predeterminado"/>
+            </div>
+            <div>
+              <label for="fragmentRetries" class="text-xs block mb-1" style="color:var(--text-muted)">Reintentos por fragmento</label>
+              <input id="fragmentRetries" type="number" min="0" max="20" placeholder="Predeterminado"/>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="sleepInterval" class="text-xs block mb-1" style="color:var(--text-muted)">Pausa minima entre videos (s)</label>
+              <input id="sleepInterval" type="number" min="0" max="3600" step="0.1" placeholder="0"/>
+            </div>
+            <div>
+              <label for="maxSleepInterval" class="text-xs block mb-1" style="color:var(--text-muted)">Pausa maxima entre videos (s)</label>
+              <input id="maxSleepInterval" type="number" min="0" max="3600" step="0.1" placeholder="0"/>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="dateAfter" class="text-xs block mb-1" style="color:var(--text-muted)">Publicado despues de</label>
+              <input id="dateAfter" type="text" inputmode="numeric" placeholder="YYYYMMDD" pattern="\\d{8}"/>
+            </div>
+            <div>
+              <label for="dateBefore" class="text-xs block mb-1" style="color:var(--text-muted)">Publicado antes de</label>
+              <input id="dateBefore" type="text" inputmode="numeric" placeholder="YYYYMMDD" pattern="\\d{8}"/>
             </div>
           </div>
           <div>
@@ -102,7 +150,7 @@
         <div class="flex items-center justify-between gap-3 mb-3">
           <div>
             <h2 class="text-lg font-semibold">Cola de descargas</h2>
-            <p class="text-xs mt-1" style="color:var(--text-muted)">Las descargas activas permanecen visibles; se muestran hasta cinco completadas.</p>
+            <p class="text-xs mt-1" style="color:var(--text-muted)">Las descargas activas y fallidas permanecen visibles hasta que las retires.</p>
           </div>
           <span id="jobs-count" class="text-xs shrink-0" style="color:var(--text-muted)"></span>
         </div>
@@ -119,20 +167,48 @@
           <i data-lucide="radio-tower" class="section-icon" aria-hidden="true"></i>
         </div>
 
-        <form id="channel-form" class="channel-form mt-4 mb-4">
-          <div class="channel-url-field">
-            <label for="channel-url" class="text-xs block mb-1" style="color:var(--text-muted)">URL del canal</label>
-            <input id="channel-url" type="url" placeholder="https://www.youtube.com/@canal" required/>
-          </div>
-          <div class="channel-count-field">
-            <label for="initial-download-count" class="text-xs block mb-1" style="color:var(--text-muted)">Descargar ahora</label>
-            <input id="initial-download-count" type="number" min="0" max="25" value="5" required/>
-          </div>
-          <button type="submit" class="btn-ghost shrink-0"><i data-lucide="plus" class="ui-icon"></i> Agregar</button>
-        </form>
+        <button id="open-channel-modal" type="button" class="btn-ghost w-full mt-4 mb-4"><i data-lucide="plus" class="ui-icon"></i> Agregar canal</button>
         <div id="channels-list" class="space-y-2"></div>
       </aside>
     </div>
+  </div>
+
+  <div id="channel-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="channel-modal-title">
+    <form id="channel-form" class="confirm-modal channel-modal-form">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h2 id="channel-modal-title" class="text-lg font-semibold">Agregar canal</h2>
+          <p class="text-sm mt-1" style="color:var(--text-muted)">Elige que contenido se revisara y descargara.</p>
+        </div>
+        <button id="close-channel-modal" type="button" class="btn-ghost icon-button" aria-label="Cerrar"><i data-lucide="x" class="ui-icon"></i></button>
+      </div>
+      <div class="mt-5">
+        <label for="channel-url" class="text-xs block mb-1" style="color:var(--text-muted)">URL del canal</label>
+        <input id="channel-url" type="url" placeholder="https://www.youtube.com/@canal" required/>
+      </div>
+      <div id="initial-download-wrap" class="mt-4">
+        <label for="initial-download-count" class="text-xs block mb-1" style="color:var(--text-muted)">Descargar ahora</label>
+        <input id="initial-download-count" type="number" min="0" max="25" value="1" required/>
+      </div>
+      <div class="mt-4">
+        <label for="channel-scan-limit" class="text-xs block mb-1" style="color:var(--text-muted)">Contenido a obtener del canal</label>
+        <input id="channel-scan-limit" type="number" min="1" max="100" value="5" required/>
+        <p class="text-xs mt-1" style="color:var(--text-muted)">Cantidad de videos, Shorts o directos que se revisaran al agregarlo.</p>
+      </div>
+      <fieldset class="mt-4">
+        <legend class="text-sm font-medium mb-2">Contenido a descargar</legend>
+        <div class="channel-kind-options">
+          <label><input type="checkbox" name="channel-kind" value="normal"/> Videos</label>
+          <label><input type="checkbox" name="channel-kind" value="short"/> Shorts</label>
+          <label><input type="checkbox" name="channel-kind" value="live"/> Directos</label>
+        </div>
+        <p class="text-xs mt-2" style="color:var(--text-muted)">Selecciona al menos una opcion.</p>
+      </fieldset>
+      <div class="confirm-modal-actions">
+        <button id="cancel-channel-modal" type="button" class="btn-ghost">Cancelar</button>
+        <button id="save-channel" type="submit" class="btn-primary"><i data-lucide="plus" class="ui-icon"></i> Agregar canal</button>
+      </div>
+    </form>
   </div>
 
   <script src="/js/api.js"></script>
@@ -143,7 +219,6 @@
       if (!user) return;
       WT.renderNav('download', user);
       const dismissedJobs = new Set();
-      const MAX_COMPLETED_JOBS = 5;
 
       WTApi.ytdlpVersion().then((v) => {
         if (!v.available) document.getElementById('ytdlp-warning').classList.remove('hidden');
@@ -167,6 +242,17 @@
             playlistItems: document.getElementById('playlistItems').value,
             subtitles: document.getElementById('subtitles').checked,
             subLangs: document.getElementById('subLangs').value,
+            embedThumbnail: document.getElementById('embedThumbnail').checked,
+            embedChapters: document.getElementById('embedChapters').checked,
+            audioMultistreams: document.getElementById('audioMultistreams').checked,
+            sponsorblockRemove: document.getElementById('sponsorblockRemove').value,
+            liveFromStart: document.getElementById('liveFromStart').checked,
+            retries: document.getElementById('retries').value,
+            fragmentRetries: document.getElementById('fragmentRetries').value,
+            sleepInterval: document.getElementById('sleepInterval').value,
+            maxSleepInterval: document.getElementById('maxSleepInterval').value,
+            dateAfter: document.getElementById('dateAfter').value,
+            dateBefore: document.getElementById('dateBefore').value,
             rateLimit: document.getElementById('rateLimit').value,
             proxy: document.getElementById('proxy').value,
             cookiesFile: document.getElementById('cookiesFile').value,
@@ -219,11 +305,7 @@
       async function refreshJobs() {
         try {
           const jobs = await WTApi.listJobs();
-          const activeJobs = jobs.filter((job) => job.status !== 'done' && !dismissedJobs.has(job.id));
-          const completedJobs = jobs
-            .filter((job) => job.status === 'done' && !dismissedJobs.has(job.id))
-            .slice(0, MAX_COMPLETED_JOBS);
-          const visibleJobs = [...activeJobs, ...completedJobs];
+          const visibleJobs = jobs.filter((job) => job.status !== 'done' && !dismissedJobs.has(job.id));
           document.getElementById('jobs-count').textContent = visibleJobs.length ? `${visibleJobs.length} visibles` : '';
           document.getElementById('jobs-list').innerHTML = visibleJobs.map(jobRow).join('') ||
             '<p class="empty-panel text-sm">No hay descargas recientes.</p>';
@@ -242,6 +324,8 @@
               clearInterval(interval);
               if (job.status === 'done') {
                 WT.toast('Descarga completada: ' + job.url);
+                dismissedJobs.add(job.id);
+                WTApi.deleteJob(job.id).catch(() => {});
               }
               refreshJobs();
             }
@@ -253,17 +337,99 @@
       setInterval(refreshJobs, 8000);
 
       // --- Canales ---
+      const channelModal = document.getElementById('channel-modal');
+      const channelForm = document.getElementById('channel-form');
+      let editingChannelId = null;
+
+      function selectedChannelKinds() {
+        return [...document.querySelectorAll('input[name="channel-kind"]:checked')].map((input) => input.value);
+      }
+
+      function escapeChannelText(value) {
+        return String(value || '').replace(/[&<>'"]/g, (character) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[character]));
+      }
+
+      function channelInitials(channel) {
+        const name = String(channel.channel_name || channelHandle(channel) || 'Canal').trim();
+        return escapeChannelText(name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'C');
+      }
+
+      function channelHandle(channel) {
+        const match = String(channel.channel_url || '').match(/@([^/?#]+)/);
+        return match ? `@${match[1]}` : '';
+      }
+
+      function resetChannelForm() {
+        editingChannelId = null;
+        channelForm.reset();
+        document.getElementById('channel-modal-title').textContent = 'Agregar canal';
+        document.getElementById('initial-download-wrap').classList.remove('hidden');
+        document.getElementById('initial-download-count').value = '1';
+        document.getElementById('channel-scan-limit').value = '5';
+        document.getElementById('save-channel').innerHTML = '<i data-lucide="plus" class="ui-icon"></i> Agregar canal';
+        WT.refreshIcons();
+      }
+
+      function openChannelModal(channel = null) {
+        resetChannelForm();
+        if (channel) {
+          editingChannelId = channel.id;
+          document.getElementById('channel-modal-title').textContent = 'Editar canal';
+          document.getElementById('channel-url').value = channel.channel_url;
+          document.getElementById('channel-url').disabled = true;
+          document.getElementById('initial-download-wrap').classList.add('hidden');
+          document.getElementById('channel-scan-limit').value = String(channel.channel_scan_limit || 5);
+          const kinds = Array.isArray(channel.allowed_video_kinds) ? channel.allowed_video_kinds : ['normal', 'short', 'live'];
+          document.querySelectorAll('input[name="channel-kind"]').forEach((input) => { input.checked = kinds.includes(input.value); });
+          document.getElementById('save-channel').innerHTML = '<i data-lucide="save" class="ui-icon"></i> Guardar cambios';
+          WT.refreshIcons();
+        }
+        channelModal.classList.remove('hidden');
+        document.getElementById('channel-url').focus();
+      }
+
+      function closeChannelModal() {
+        channelModal.classList.add('hidden');
+        document.getElementById('channel-url').disabled = false;
+        resetChannelForm();
+      }
+
+      document.getElementById('open-channel-modal').onclick = () => openChannelModal();
+      document.getElementById('close-channel-modal').onclick = closeChannelModal;
+      document.getElementById('cancel-channel-modal').onclick = closeChannelModal;
+      channelModal.addEventListener('click', (event) => { if (event.target === channelModal) closeChannelModal(); });
+
       async function loadChannels() {
         const channels = await WTApi.listChannels();
         document.getElementById('channels-list').innerHTML = channels.map((c) => `
-          <div class="card rounded-xl p-3 text-sm">
-            <div class="flex justify-between items-center gap-3">
-              <span class="truncate">${c.channel_name && c.channel_name !== 'NA' ? c.channel_name : c.channel_url}</span>
-              <button data-id="${c.id}" class="wt-remove-channel btn-ghost icon-button" aria-label="Quitar canal"><i data-lucide="x" class="ui-icon"></i></button>
+          <div class="channel-card card rounded-xl p-3 text-sm">
+            <div class="channel-card-header">
+              <div class="channel-avatar" aria-hidden="true">
+                ${c.channel_thumbnail ? `<img src="${escapeChannelText(c.channel_thumbnail)}" alt="" loading="lazy" onerror="this.style.display='none';"/>` : ''}
+                <span>${channelInitials(c)}</span>
+              </div>
+              <div class="channel-identity">
+                <span class="channel-name" title="${escapeChannelText(c.channel_name || channelHandle(c) || c.channel_url)}">${escapeChannelText(c.channel_name || channelHandle(c) || 'Canal sin nombre')}</span>
+                <span class="channel-url" title="${escapeChannelText(c.channel_url)}">${escapeChannelText(c.channel_url)}</span>
+              </div>
+              <div class="channel-actions">
+                <button data-id="${c.id}" class="wt-edit-channel btn-ghost icon-button" aria-label="Editar canal"><i data-lucide="settings-2" class="ui-icon"></i></button>
+                <button data-id="${c.id}" class="wt-remove-channel btn-ghost icon-button" aria-label="Quitar canal"><i data-lucide="x" class="ui-icon"></i></button>
+              </div>
             </div>
-            <button data-id="${c.id}" class="wt-more-channel btn-ghost w-full mt-2"><i data-lucide="list-plus" class="ui-icon"></i> Mostrar más videos</button>
+            <div class="channel-card-meta">
+              <span class="channel-meta-item"><i data-lucide="download" class="badge-icon"></i> ${(Array.isArray(c.allowed_video_kinds) ? c.allowed_video_kinds : ['normal', 'short', 'live']).map((kind) => ({ normal: 'Videos', short: 'Shorts', live: 'Directos' }[kind] || kind)).join(', ')}</span>
+              <span class="channel-meta-item"><i data-lucide="list-ordered" class="badge-icon"></i> ${escapeChannelText(c.channel_scan_limit || 5)} elementos</span>
+            </div>
+            <button data-id="${c.id}" class="wt-more-channel btn-ghost channel-more-button"><i data-lucide="refresh-cw" class="ui-icon"></i> Buscar novedades</button>
           </div>`).join('') || `<p class="text-sm" style="color:var(--text-muted)">Sin canales agregados aun.</p>`;
         WT.refreshIcons();
+
+        document.querySelectorAll('.wt-edit-channel').forEach((btn) => {
+          btn.onclick = () => openChannelModal(channels.find((channel) => channel.id === btn.dataset.id));
+        });
 
         document.querySelectorAll('.wt-remove-channel').forEach((btn) => {
           btn.onclick = async () => {
@@ -294,36 +460,48 @@
             WT.refreshIcons();
             try {
               const result = await WTApi.loadMoreChannel(btn.dataset.id);
-              WT.toast(`${result.pending || 0} videos pendientes añadidos. ${result.excluded || 0} exclusivos omitidos.`);
+              WT.toast(`${result.pending || 0} novedades pendientes añadidas. ${result.excluded || 0} elementos omitidos.`);
               loadChannels();
             } catch (err) {
               btn.disabled = false;
-              btn.innerHTML = '<i data-lucide="list-plus" class="ui-icon"></i> Mostrar más videos';
+              btn.innerHTML = '<i data-lucide="refresh-cw" class="ui-icon"></i> Buscar novedades';
               WT.refreshIcons();
               WT.toast(err.message, true);
             }
           };
         });
       }
-      document.getElementById('channel-form').addEventListener('submit', async (e) => {
+      channelForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const submitButton = e.currentTarget.querySelector('button[type="submit"]');
+        const submitButton = document.getElementById('save-channel');
+        const allowedVideoKinds = selectedChannelKinds();
+        if (!allowedVideoKinds.length) {
+          WT.toast('Selecciona al menos un tipo de contenido.', true);
+          return;
+        }
         submitButton.disabled = true;
-        submitButton.innerHTML = '<i data-lucide="loader-circle" class="ui-icon spin-icon"></i> Agregando...';
+        submitButton.innerHTML = '<i data-lucide="loader-circle" class="ui-icon spin-icon"></i> Guardando...';
         WT.refreshIcons();
         try {
-          const initialDownloadCount = Number(document.getElementById('initial-download-count').value);
-          const result = await WTApi.addChannel(document.getElementById('channel-url').value, null, initialDownloadCount);
-          document.getElementById('channel-url').value = '';
-          document.getElementById('initial-download-count').value = '5';
-          const initialCheck = result.initialCheck || {};
-          WT.toast(`Canal agregado: ${initialCheck.enqueued || 0} descargas iniciadas, ${initialCheck.pending || 0} pendientes y ${initialCheck.excluded || 0} exclusivos omitidos.`);
+          if (editingChannelId) {
+            await WTApi.updateChannel(editingChannelId, allowedVideoKinds, Number(document.getElementById('channel-scan-limit').value));
+            WT.toast('Preferencias del canal actualizadas.');
+          } else {
+            const initialDownloadCount = Number(document.getElementById('initial-download-count').value);
+            const channelScanLimit = Number(document.getElementById('channel-scan-limit').value);
+            const result = await WTApi.addChannel(document.getElementById('channel-url').value, null, initialDownloadCount, allowedVideoKinds, channelScanLimit);
+            const initialCheck = result.initialCheck || {};
+            WT.toast(`Canal agregado: ${initialCheck.enqueued || 0} descargas iniciadas, ${initialCheck.pending || 0} pendientes y ${initialCheck.excluded || 0} omitidos.`);
+          }
+          closeChannelModal();
           loadChannels();
         } catch (err) {
-          WT.toast(`No se pudo agregar el canal: ${err.message}`, true);
+          WT.toast(`No se pudo guardar el canal: ${err.message}`, true);
         } finally {
           submitButton.disabled = false;
-          submitButton.innerHTML = '<i data-lucide="plus" class="ui-icon"></i> Agregar';
+          submitButton.innerHTML = editingChannelId
+            ? '<i data-lucide="save" class="ui-icon"></i> Guardar cambios'
+            : '<i data-lucide="plus" class="ui-icon"></i> Agregar canal';
           WT.refreshIcons();
         }
       });

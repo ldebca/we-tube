@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS media (
   view_count BIGINT,
   like_count BIGINT,
   published_at TIMESTAMPTZ,
+  pending_sort_at TIMESTAMPTZ,
   duration_seconds INTEGER,
   thumbnail_path TEXT,
   source_url TEXT,
@@ -57,6 +58,7 @@ ALTER TABLE media ADD COLUMN IF NOT EXISTS pending_download BOOLEAN NOT NULL DEF
 ALTER TABLE media ADD COLUMN IF NOT EXISTS video_kind VARCHAR(16) NOT NULL DEFAULT 'normal';
 ALTER TABLE media ADD COLUMN IF NOT EXISTS author_name TEXT;
 ALTER TABLE media ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE media ADD COLUMN IF NOT EXISTS pending_sort_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_media_video_kind ON media(video_kind);
 
 CREATE TABLE IF NOT EXISTS download_jobs (
@@ -80,11 +82,17 @@ CREATE TABLE IF NOT EXISTS channels (
   owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
   channel_url TEXT NOT NULL,
   channel_name TEXT,
+  channel_thumbnail TEXT,
+  allowed_video_kinds TEXT[] NOT NULL DEFAULT ARRAY['normal', 'short', 'live'],
+  channel_scan_limit INTEGER NOT NULL DEFAULT 5,
   video_cursor INTEGER NOT NULL DEFAULT 1,
   last_checked_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_channels_owner ON channels(owner_id);
+ALTER TABLE channels ADD COLUMN IF NOT EXISTS allowed_video_kinds TEXT[] NOT NULL DEFAULT ARRAY['normal', 'short', 'live'];
+ALTER TABLE channels ADD COLUMN IF NOT EXISTS channel_thumbnail TEXT;
+ALTER TABLE channels ADD COLUMN IF NOT EXISTS channel_scan_limit INTEGER NOT NULL DEFAULT 5;
 ALTER TABLE channels ADD COLUMN IF NOT EXISTS video_cursor INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE media ADD COLUMN IF NOT EXISTS channel_id UUID REFERENCES channels(id) ON DELETE SET NULL;
 ALTER TABLE download_jobs ADD COLUMN IF NOT EXISTS channel_id UUID REFERENCES channels(id) ON DELETE SET NULL;
@@ -96,8 +104,12 @@ const MIGRATION_SQL = [
   "ALTER TABLE media ADD COLUMN IF NOT EXISTS video_kind VARCHAR(16) NOT NULL DEFAULT 'normal';",
   "ALTER TABLE media ADD COLUMN IF NOT EXISTS author_name TEXT;",
   "ALTER TABLE media ADD COLUMN IF NOT EXISTS description TEXT;",
+  "ALTER TABLE media ADD COLUMN IF NOT EXISTS pending_sort_at TIMESTAMPTZ;",
   'CREATE INDEX IF NOT EXISTS idx_media_video_kind ON media(video_kind);',
   "ALTER TABLE media ALTER COLUMN video_kind SET DEFAULT 'normal';",
+  "ALTER TABLE channels ADD COLUMN IF NOT EXISTS allowed_video_kinds TEXT[] NOT NULL DEFAULT ARRAY['normal', 'short', 'live'];",
+  "ALTER TABLE channels ADD COLUMN IF NOT EXISTS channel_thumbnail TEXT;",
+  "ALTER TABLE channels ADD COLUMN IF NOT EXISTS channel_scan_limit INTEGER NOT NULL DEFAULT 5;",
 ];
 
 async function ensureSchema() {

@@ -26,14 +26,20 @@ window.WTApi = (function () {
       return req('/media?' + params.toString());
     },
     getMedia: (id) => req('/media/' + id),
+    requestMediaQuality: (id, quality) => req('/media/' + id + '/quality', {
+      method: 'POST',
+      body: JSON.stringify({ quality }),
+    }),
     deleteMedia: (id) => req('/media/' + id, { method: 'DELETE' }),
     toggleFavorite: (id) => req('/media/' + id + '/favorite', { method: 'POST' }),
+    expireAfterView: (id) => req('/media/' + id + '/expire-after-view', { method: 'POST' }),
 
     ytdlpVersion: () => req('/downloads/version'),
     startDownload: (payload) => req('/downloads', { method: 'POST', body: JSON.stringify(payload) }),
     getJob: (id) => req('/downloads/' + id),
     deleteJob: (id) => req('/downloads/' + id, { method: 'DELETE' }),
     listJobs: () => req('/downloads'),
+    getAudioTracks: (id) => req('/media/' + id + '/audio-tracks'),
 
     upload: (file, metadataOrOnProgress, thumbnailFile, maybeOnProgress) => {
       return new Promise((resolve, reject) => {
@@ -75,9 +81,13 @@ window.WTApi = (function () {
     },
 
     listChannels: () => req('/channels'),
-    addChannel: (channelUrl, channelName, initialDownloadCount) => req('/channels', {
+    addChannel: (channelUrl, channelName, initialDownloadCount, allowedVideoKinds, channelScanLimit) => req('/channels', {
       method: 'POST',
-      body: JSON.stringify({ channelUrl, channelName, initialDownloadCount }),
+      body: JSON.stringify({ channelUrl, channelName, initialDownloadCount, allowedVideoKinds, channelScanLimit }),
+    }),
+    updateChannel: (id, allowedVideoKinds, channelScanLimit) => req('/channels/' + id, {
+      method: 'PATCH',
+      body: JSON.stringify({ allowedVideoKinds, channelScanLimit }),
     }),
     loadMoreChannel: (id) => req('/channels/' + id + '/more', { method: 'POST' }),
     removeChannel: (id) => req('/channels/' + id, { method: 'DELETE' }),

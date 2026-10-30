@@ -21,15 +21,21 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   const identity = resolveUserStorage(req.user);
   if (identity.isIncognito) return res.status(400).json({ error: 'No disponible en modo incognito.' });
-  const { channelUrl, channelName, initialDownloadCount } = req.body || {};
+  const { channelUrl, channelName, initialDownloadCount, channelScanLimit } = req.body || {};
   if (!channelUrl) return res.status(400).json({ error: 'channelUrl es requerido.' });
-  const downloadCount = Number.isInteger(Number(initialDownloadCount)) ? Number(initialDownloadCount) : 5;
+  const allowedVideoKinds = channelsService.normalizeVideoKinds(req.body && req.body.allowedVideoKinds);
+  if (!allowedVideoKinds) return res.status(400).json({ error: 'Selecciona al menos un tipo de contenido.' });
+  const downloadCount = Number.isInteger(Number(initialDownloadCount)) ? Number(initialDownloadCount) : 1;
+  const scanLimit = Number.isInteger(Number(channelScanLimit)) ? Number(channelScanLimit) : 5;
   if (downloadCount < 0 || downloadCount > 25) {
     return res.status(400).json({ error: 'initialDownloadCount debe estar entre 0 y 25.' });
   }
+  if (scanLimit < 1 || scanLimit > 100) {
+    return res.status(400).json({ error: 'channelScanLimit debe estar entre 1 y 100.' });
+  }
   const { rows } = await pool.query(
-    'INSERT INTO channels (owner_id, channel_url, channel_name) VALUES ($1,$2,$3) RETURNING *',
-    [identity.ownerIdForDb, channelUrl, channelName || null]
+    'INSERT INTO channels (owner_id, channel_url, channel_name, allowed_video_kinds, channel_scan_limit) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+    [identity.ownerIdForDb, channelUrl, channelName || null, allowedVideoKinds, scanLimit]
   );
   try {
     const initialCheck = await channelsService.checkChannel(rows[0].id, downloadCount);
@@ -39,6 +45,26 @@ router.post('/', requireAuth, async (req, res) => {
     console.error(`[channels] Error en la carga inicial de ${channelUrl}:`, err.message);
     res.status(502).json({ error: `No se pudo revisar el canal: ${err.message}`, channel: rows[0] });
   }
+});
+
+router.patch('/:id', requireAuth, async (req, res) => {
+  const identity = resolveUserStorage(req.user);
+  if (identity.isIncognito) return res.status(400).json({ error: 'No disponible en modo incognito.' });
+  const allowedVideoKinds = channelsService.normalizeVideoKinds(req.body && req.body.allowedVideoKinds);
+  if (!allowedVideoKinds) return res.status(400).json({ error: 'Selecciona al menos un tipo de contenido.' });
+  const scanLimit = Number.isInteger(Number(req.body && req.body.channelScanLimit))
+    ? Number(req.body.channelScanLimit)
+    : 5;
+  if (scanLimit < 1 || scanLimit > 100) {
+    return res.status(400).json({ error: 'channelScanLimit debe estar entre 1 y 100.' });
+  }
+  const { rows } = await pool.query(
+    `UPDATE channels SET allowed_video_kinds = $1, channel_scan_limit = $2
+     WHERE id = $3 AND owner_id = $4 RETURNING *`,
+    [allowedVideoKinds, scanLimit, req.params.id, identity.ownerIdForDb]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Canal no encontrado.' });
+  res.json(rows[0]);
 });
 
 router.delete('/:id', requireAuth, async (req, res) => {

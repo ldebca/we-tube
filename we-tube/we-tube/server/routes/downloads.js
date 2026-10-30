@@ -19,7 +19,9 @@ router.get('/version', requireAuth, async (req, res) => {
 // Inicia una descarga en segundo plano. El usuario puede seguir navegando.
 router.post('/', requireAuth, async (req, res) => {
   const { url, mode, quality, audioFormat, isPlaylist, playlistItems,
-    subtitles, subLangs, embedThumbnail, rateLimit, proxy, cookiesFile, extraArgs, pendingMediaId } = req.body || {};
+    subtitles, subLangs, embedThumbnail, embedChapters, audioMultistreams, sponsorblockRemove, liveFromStart,
+    retries, fragmentRetries, sleepInterval, maxSleepInterval, dateAfter, dateBefore,
+    rateLimit, proxy, cookiesFile, extraArgs, pendingMediaId } = req.body || {};
 
   if (!url || !/^https?:\/\//i.test(url)) {
     return res.status(400).json({ error: 'Debes proporcionar una URL valida (http/https).' });
@@ -44,6 +46,16 @@ router.post('/', requireAuth, async (req, res) => {
     subtitles: !!subtitles,
     subLangs,
     embedThumbnail: !!embedThumbnail,
+    embedChapters: !!embedChapters,
+    audioMultistreams: !!audioMultistreams,
+    sponsorblockRemove,
+    liveFromStart: !!liveFromStart,
+    retries,
+    fragmentRetries,
+    sleepInterval,
+    maxSleepInterval,
+    dateAfter,
+    dateBefore,
     rateLimit,
     proxy,
     cookiesFile,

@@ -31,13 +31,14 @@ function getVersion() {
 
 function classifyVideoKind(video = {}) {
   if (!video || typeof video !== 'object') return 'normal';
-  const shortPath = /\/shorts\//i.test(String(video.webpage_url || video.source_url || '')) || String(video.is_short || '').toLowerCase() === 'true';
+  const videoUrl = String(video.webpage_url || video.source_url || video.original_url || video.url || '');
+  const shortPath = /\/shorts\//i.test(videoUrl) || String(video.is_short || '').toLowerCase() === 'true';
   if (shortPath) return 'short';
 
   const liveStatus = String(video.live_status || video.liveStatus || video.status || '').trim().toLowerCase();
   const isLiveFlag = Boolean(video.is_live || video.live || video.isLive);
   const liveAlias = ['is_live', 'was_live', 'is_upcoming', 'was_upcoming', 'live', 'post_live', 'planned_live', 'premiere'];
-  if (isLiveFlag || liveAlias.includes(liveStatus) || /live/i.test(String(video.webpage_url || ''))) {
+  if (isLiveFlag || liveAlias.includes(liveStatus) || /live/i.test(videoUrl)) {
     return 'live';
   }
   return 'normal';
@@ -70,13 +71,16 @@ function buildArgs(options, outputDir) {
     args.push('-x', '--audio-format', options.audioFormat || 'mp3');
   } else {
     let fmt;
-    if (!options.quality || options.quality === 'best') {
+    if (options.audioMultistreams) {
+      fmt = 'bv*+mergeall[vcodec=none]/best';
+    } else if (!options.quality || options.quality === 'best') {
       fmt = cfg.properties.ytdlp.defaultFormat;
     } else {
       const h = options.quality;
       fmt = `bestvideo[height<=${h}]+bestaudio/best[height<=${h}]`;
     }
-    args.push('-f', fmt, '--merge-output-format', 'mp4');
+    args.push('-f', fmt, '--merge-output-format', options.audioMultistreams ? 'mkv' : 'mp4');
+    if (options.audioMultistreams) args.push('--audio-multistreams');
   }
 
   // Playlist
@@ -86,6 +90,9 @@ function buildArgs(options, outputDir) {
   } else {
     args.push('--no-playlist');
   }
+  if (options.liveFromStart) args.push('--live-from-start');
+  if (options.sponsorblockRemove) args.push('--sponsorblock-remove', String(options.sponsorblockRemove));
+  if (options.embedChapters) args.push('--embed-chapters');
 
   // Subtitulos
   if (options.subtitles) {
@@ -95,6 +102,7 @@ function buildArgs(options, outputDir) {
   // Metadata y miniatura (requisito: preservar canal, vistas, likes, fecha, etc.)
   if (cfg.properties.ytdlp.writeInfoJson) args.push('--write-info-json');
   if (cfg.properties.ytdlp.writeThumbnail || options.embedThumbnail) args.push('--write-thumbnail');
+  if (options.embedThumbnail) args.push('--embed-thumbnail');
   if (cfg.properties.ytdlp.embedMetadata) args.push('--embed-metadata');
   args.push('--parse-metadata', '%(uploader)s:%(meta_artist)s');
 
@@ -102,6 +110,18 @@ function buildArgs(options, outputDir) {
   const rate = options.rateLimit || cfg.properties.ytdlp.rateLimit;
   if (rate) args.push('--limit-rate', rate);
   if (options.proxy) args.push('--proxy', options.proxy);
+  const integerOption = (value) => Number.isInteger(Number(value)) && Number(value) >= 0 ? String(Number(value)) : null;
+  const decimalOption = (value) => Number.isFinite(Number(value)) && Number(value) >= 0 ? String(Number(value)) : null;
+  const retries = integerOption(options.retries);
+  const fragmentRetries = integerOption(options.fragmentRetries);
+  const sleepInterval = decimalOption(options.sleepInterval);
+  const maxSleepInterval = decimalOption(options.maxSleepInterval);
+  if (retries !== null) args.push('--retries', retries);
+  if (fragmentRetries !== null) args.push('--fragment-retries', fragmentRetries);
+  if (sleepInterval !== null) args.push('--sleep-interval', sleepInterval);
+  if (maxSleepInterval !== null) args.push('--max-sleep-interval', maxSleepInterval);
+  if (/^\d{8}$/.test(String(options.dateAfter || ''))) args.push('--dateafter', String(options.dateAfter));
+  if (/^\d{8}$/.test(String(options.dateBefore || ''))) args.push('--datebefore', String(options.dateBefore));
   const concurrency = cfg.properties.ytdlp.concurrentFragments;
   if (concurrency) args.push('--concurrent-fragments', String(concurrency));
   const cookies = options.cookiesFile || cfg.properties.ytdlp.cookiesFile;
@@ -183,7 +203,7 @@ function listChannelVideos(channelUrl, limit, start = 1) {
     }
     args.push(
       '--print',
-      '%(id)s|||%(title)s|||%(webpage_url)s|||%(thumbnail)s|||%(uploader)s|||%(availability)s|||%(is_short)s|||%(live_status)s|||%(is_live)s'
+      '%(id)s|||%(title)s|||%(webpage_url)s|||%(thumbnail)s|||%(channel)s|||%(uploader)s|||%(availability)s|||%(is_short)s|||%(live_status)s|||%(is_live)s|||%(channel_thumbnail)s|||%(upload_date)s'
     );
     args.push(channelUrl);
     const proc = spawn(BIN, args);
@@ -199,22 +219,59 @@ function listChannelVideos(channelUrl, limit, start = 1) {
         .split('\n')
         .filter(Boolean)
         .map((line) => {
-          const [id, title, url, thumbnail, channelName, availability, isShort, liveStatus, isLive] = line.split('|||');
+          const [id, title, url, thumbnail, channel, uploader, availability, isShort, liveStatus, isLive, channelThumbnail, uploadDate] = line.split('|||');
           const normalizedVideo = {
             id,
             title: title === 'NA' ? null : title,
             url,
             thumbnail: thumbnail === 'NA' ? null : thumbnail,
-            channelName: channelName === 'NA' ? null : channelName,
+            channelName: channel !== 'NA' ? channel : (uploader === 'NA' ? null : uploader),
             availability: availability === 'NA' ? null : availability,
             is_short: String(isShort || '').toLowerCase() === 'true',
             live_status: liveStatus === 'NA' ? null : liveStatus,
             is_live: String(isLive || '').toLowerCase() === 'true',
+            channelThumbnail: channelThumbnail === 'NA' ? null : channelThumbnail,
+            upload_date: uploadDate === 'NA' ? null : uploadDate,
           };
           normalizedVideo.video_kind = classifyVideoKind(normalizedVideo);
           return normalizedVideo;
         });
       resolve(items);
+    });
+  });
+}
+
+function getChannelMetadata(channelUrl) {
+  return new Promise((resolve) => {
+    const args = ['--no-warnings', '--skip-download', '--playlist-items', '1', '--dump-single-json', channelUrl];
+    const proc = spawn(BIN, args);
+    let out = '';
+    proc.stdout.on('data', (data) => (out += data.toString()));
+    proc.on('error', () => resolve(null));
+    proc.on('close', async (code) => {
+      if (code !== 0 || !out.trim()) return resolve(null);
+      try {
+        const info = JSON.parse(out);
+        const item = Array.isArray(info.entries) ? info.entries.find(Boolean) || info : info;
+        let channelThumbnail = item.channel_thumbnail || info.channel_thumbnail || item.uploader_url_thumbnail || null;
+        if (!channelThumbnail) {
+          try {
+            const response = await fetch(channelUrl, { signal: AbortSignal.timeout(15000) });
+            if (response.ok) {
+              const page = (await response.text()).replace(/\\\//g, '/');
+              channelThumbnail = page.match(/https:\/\/(?:yt3\.googleusercontent\.com|yt3\.ggpht\.com)\/[^"'\\\s]+/)?.[0] || null;
+            }
+          } catch (error) {
+            // El nombre e iniciales siguen disponibles si la página no responde.
+          }
+        }
+        resolve({
+          channelName: item.channel || item.uploader || info.channel || info.uploader || null,
+          channelThumbnail,
+        });
+      } catch (error) {
+        resolve(null);
+      }
     });
   });
 }
@@ -230,4 +287,4 @@ function findLatestInfoJson(outputDir) {
   return JSON.parse(fs.readFileSync(path.join(outputDir, files[0].f), 'utf-8'));
 }
 
-module.exports = { getVersion, buildArgs, runDownload, listChannelVideos, findLatestInfoJson, classifyVideoKind, BIN };
+module.exports = { getVersion, buildArgs, runDownload, listChannelVideos, getChannelMetadata, findLatestInfoJson, classifyVideoKind, BIN };
